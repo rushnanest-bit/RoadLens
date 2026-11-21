@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  roadlens-builder:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: roadlens-ci-runner
+    volumes:
+      - ../app/build:/app/app/build
+    environment:
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m
+    command: >
+      bash -c "./gradlew testDebugUnitTest createDebugUnitTestCoverageReport assembleDebug --no-daemon"
