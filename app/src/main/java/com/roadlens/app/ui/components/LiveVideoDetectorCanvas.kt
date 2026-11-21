@@ -42,8 +42,8 @@ import java.util.Locale
 import kotlin.math.max
 
 /**
- * Live hardware-decoded video surface with real-time YOLO bounding box and confidence label overlay.
- * Video plays once without looping and stops upon completion. Maintained under 200 lines.
+ * Live hardware-decoded video surface with identical YOLO bounding boxes and labels as image detection.
+ * Maintained under 200 lines strictly per project engineering rules.
  */
 @Composable
 fun LiveVideoDetectorCanvas(
@@ -60,10 +60,10 @@ fun LiveVideoDetectorCanvas(
     var videoAspectRatio by remember { mutableFloatStateOf(16f / 9f) }
     var currentDetections by remember { mutableStateOf<List<RoadDetection>>(emptyList()) }
 
-    val labelTextPaint = remember {
+    val textPaint = remember {
         Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; textSize = 26f; isFakeBoldText = true }
     }
-    val labelBgPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL } }
+    val backgroundPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL } }
 
     LaunchedEffect(seekToMs) {
         seekToMs?.let { target -> mediaPlayer?.let { runCatching { it.seekTo(target.toInt()) } } }
@@ -177,15 +177,15 @@ fun LiveVideoDetectorCanvas(
                 drawRect(Color(colorInt), Offset(left, top), Size(width, height), style = Stroke(width = 3.dp.toPx()))
 
                 val label = "${det.className} ${String.format(Locale.US, "%.2f", det.confidence)}"
-                val pad = 6f
-                val textW = labelTextPaint.measureText(label) + (pad * 2)
-                val textH = labelTextPaint.textSize + (pad * 2)
-                val badgeTop = max(0f, top - textH)
+                val padding = 8f
+                val labelWidth = textPaint.measureText(label) + (padding * 2)
+                val labelHeight = textPaint.textSize + (padding * 2)
+                val labelTop = max(0f, top - labelHeight)
 
-                labelBgPaint.color = colorInt
+                backgroundPaint.color = colorInt
                 drawContext.canvas.nativeCanvas.apply {
-                    drawRect(left, badgeTop, left + textW, badgeTop + textH, labelBgPaint)
-                    drawText(label, left + pad, badgeTop + labelTextPaint.textSize + (pad / 2), labelTextPaint)
+                    drawRect(left, labelTop, left + labelWidth, labelTop + labelHeight, backgroundPaint)
+                    drawText(label, left + padding, labelTop + textPaint.textSize + (padding / 2), textPaint)
                 }
             }
         }
