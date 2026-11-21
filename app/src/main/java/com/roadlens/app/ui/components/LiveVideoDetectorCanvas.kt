@@ -1,5 +1,6 @@
 package com.roadlens.app.ui.components
 
+import android.graphics.Paint
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.net.Uri
@@ -27,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.roadlens.app.ai.RoadDefectDetector
@@ -36,10 +38,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import java.util.Locale
+import kotlin.math.max
 
 /**
- * Live hardware-decoded video surface with real-time YOLO bounding box canvas overlay.
- * Maintained under 200 lines strictly per project engineering rules.
+ * Live hardware-decoded video surface with real-time YOLO bounding box and confidence label overlay.
+ * Video plays once without looping and stops upon completion. Maintained under 200 lines.
  */
 @Composable
 fun LiveVideoDetectorCanvas(
@@ -56,9 +60,13 @@ fun LiveVideoDetectorCanvas(
     var videoAspectRatio by remember { mutableFloatStateOf(16f / 9f) }
     var currentDetections by remember { mutableStateOf<List<RoadDetection>>(emptyList()) }
 
+    val labelTextPaint = remember {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; textSize = 26f; isFakeBoldText = true }
+    }
+    val labelBgPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL } }
+
     LaunchedEffect(seekToMs) {
-        val target = seekToMs ?: return@LaunchedEffect
-        mediaPlayer?.let { runCatching { it.seekTo(target.toInt()) } }
+        seekToMs?.let { target -> mediaPlayer?.let { runCatching { it.seekTo(target.toInt()) } } }
     }
 
     LaunchedEffect(isPlaying) {
@@ -77,11 +85,10 @@ fun LiveVideoDetectorCanvas(
                 runCatching {
                     val curr = player.currentPosition.toLong()
                     val dur = player.duration.toLong().coerceAtLeast(0L)
-                    val playing = player.isPlaying
                     val sec = curr / 1000
                     if (sec != lastSec) {
                         lastSec = sec
-                        onPlaybackStateChanged(playing, curr, dur)
+                        onPlaybackStateChanged(player.isPlaying, curr, dur)
                     }
                 }
             }
@@ -108,9 +115,7 @@ fun LiveVideoDetectorCanvas(
                                 currentDetections = results
                                 onFrameAnalyzed(results, frameTime)
                             }
-                        } finally {
-                            bmp.recycle()
-                        }
+                        } finally { bmp.recycle() }
                     }
                 }
             }
@@ -126,11 +131,7 @@ fun LiveVideoDetectorCanvas(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(260.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF101815)),
+        modifier = modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101815)),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
@@ -139,29 +140,24 @@ fun LiveVideoDetectorCanvas(
                     textureView = this
                     surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                         override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
-                            val mp = MediaPlayer().apply {
+                            mediaPlayer = MediaPlayer().apply {
                                 runCatching {
-                                    setDataSource(ctx, videoUri)
-                                    setSurface(Surface(st))
+                                    setDataSource(ctx, videoUri); setSurface(Surface(st))
                                     setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
-                                    isLooping = true
-                                    setOnPreparedListener { player ->
-                                        if (player.videoWidth > 0 && player.videoHeight > 0) {
-                                            videoAspectRatio = player.videoWidth.toFloat() / player.videoHeight.toFloat()
-                                        }
-                                        if (isPlaying) player.start()
-                                        onPlaybackStateChanged(isPlaying, 0L, player.duration.toLong().coerceAtLeast(0L))
+                                    isLooping = false
+                                    setOnPreparedListener { p ->
+                                        if (p.videoWidth > 0 && p.videoHeight > 0) videoAspectRatio = p.videoWidth.toFloat() / p.videoHeight.toFloat()
+                                        if (isPlaying) p.start()
+                                        onPlaybackStateChanged(isPlaying, 0L, p.duration.toLong().coerceAtLeast(0L))
                                     }
+                                    setOnCompletionListener { p -> onPlaybackStateChanged(false, p.duration.toLong().coerceAtLeast(0L), p.duration.toLong().coerceAtLeast(0L)) }
                                     prepareAsync()
                                 }
                             }
-                            mediaPlayer = mp
                         }
                         override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) = Unit
                         override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                            runCatching { mediaPlayer?.release() }
-                            mediaPlayer = null
-                            return true
+                            runCatching { mediaPlayer?.release() }; mediaPlayer = null; return true
                         }
                         override fun onSurfaceTextureUpdated(st: SurfaceTexture) = Unit
                     }
@@ -171,21 +167,26 @@ fun LiveVideoDetectorCanvas(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val canvasW = size.width
-            val canvasH = size.height
             for (det in currentDetections) {
-                val boxColor = Color(CLASS_COLORS.getOrElse(det.classIndex) { android.graphics.Color.RED })
-                val left = det.normLeft * canvasW
-                val top = det.normTop * canvasH
-                val width = (det.normRight - det.normLeft) * canvasW
-                val height = (det.normBottom - det.normTop) * canvasH
+                val colorInt = CLASS_COLORS.getOrElse(det.classIndex) { android.graphics.Color.RED }
+                val left = det.normLeft * size.width
+                val top = det.normTop * size.height
+                val width = (det.normRight - det.normLeft) * size.width
+                val height = (det.normBottom - det.normTop) * size.height
 
-                drawRect(
-                    color = boxColor,
-                    topLeft = Offset(left, top),
-                    size = Size(width, height),
-                    style = Stroke(width = 3.dp.toPx())
-                )
+                drawRect(Color(colorInt), Offset(left, top), Size(width, height), style = Stroke(width = 3.dp.toPx()))
+
+                val label = "${det.className} ${String.format(Locale.US, "%.2f", det.confidence)}"
+                val pad = 6f
+                val textW = labelTextPaint.measureText(label) + (pad * 2)
+                val textH = labelTextPaint.textSize + (pad * 2)
+                val badgeTop = max(0f, top - textH)
+
+                labelBgPaint.color = colorInt
+                drawContext.canvas.nativeCanvas.apply {
+                    drawRect(left, badgeTop, left + textW, badgeTop + textH, labelBgPaint)
+                    drawText(label, left + pad, badgeTop + labelTextPaint.textSize + (pad / 2), labelTextPaint)
+                }
             }
         }
     }

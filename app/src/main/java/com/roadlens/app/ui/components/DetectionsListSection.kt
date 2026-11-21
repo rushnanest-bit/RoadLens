@@ -78,7 +78,7 @@ fun DetectionsListSection(
                         }
                     }
                     Text(
-                        text = "${String.format(Locale.US, "%.1f", detection.confidence * 100)}%",
+                        text = String.format(Locale.US, "%.2f", detection.confidence),
                         color = color,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold

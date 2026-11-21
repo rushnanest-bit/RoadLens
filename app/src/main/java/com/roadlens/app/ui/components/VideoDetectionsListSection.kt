@@ -89,7 +89,7 @@ fun VideoDetectionsListSection(
                         }
                     }
                     Text(
-                        text = "${String.format(Locale.US, "%.1f", record.confidence * 100)}%",
+                        text = String.format(Locale.US, "%.2f", record.confidence),
                         color = color,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
