@@ -20,11 +20,19 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
+        }
+    }
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
         }
     }
     compileOptions {
