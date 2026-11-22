@@ -18,16 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roadlens.app.ai.RoadDefectDetector
-import com.roadlens.app.domain.model.ScanInputMode
+import com.roadlens.app.domain.model.ScanOperationalMode
 import com.roadlens.app.ui.components.CameraScanSection
-import com.roadlens.app.ui.components.ImageScanSection
-import com.roadlens.app.ui.components.VideoScanSection
+import com.roadlens.app.ui.components.DatasetLabSection
 import com.roadlens.app.ui.viewmodel.ScanScreenUiState
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 
 /**
- * Main scanning screen supporting Live CameraX scan, Image inspection, and Video replay.
- * Maintained under 100 lines strictly per project engineering rules.
+ * Main scanning screen supporting Live Fleet CameraX scan and the isolated Dataset Lab test bench.
+ * Strictly under 100 lines per project engineering rules.
  */
 @Composable
 fun ScanScreen(
@@ -46,16 +45,17 @@ fun ScanScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        // Operational Mode Selector: Live Fleet Scan vs. Dataset Lab
         TabRow(
-            selectedTabIndex = uiState.inputMode.ordinal,
+            selectedTabIndex = uiState.operationalMode.ordinal,
             containerColor = Color.White,
             contentColor = brandGreen,
             modifier = Modifier.clip(RoundedCornerShape(12.dp))
         ) {
-            ScanInputMode.entries.forEach { mode ->
+            ScanOperationalMode.entries.forEach { mode ->
                 Tab(
-                    selected = uiState.inputMode == mode,
-                    onClick = { viewModel.setInputMode(mode) },
+                    selected = uiState.operationalMode == mode,
+                    onClick = { viewModel.setOperationalMode(mode) },
                     text = { Text("${mode.icon} ${mode.title}", fontWeight = FontWeight.Bold) }
                 )
             }
@@ -63,20 +63,17 @@ fun ScanScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        when (uiState.inputMode) {
-            ScanInputMode.CAMERA -> CameraScanSection(
+        when (uiState.operationalMode) {
+            ScanOperationalMode.LIVE_SCAN -> CameraScanSection(
                 cameraState = uiState.cameraState,
                 viewModel = viewModel,
                 detector = detector
             )
-            ScanInputMode.IMAGE -> ImageScanSection(
-                imageState = uiState.imageState,
-                onChooseImage = onChooseImage
-            )
-            ScanInputMode.VIDEO -> VideoScanSection(
-                videoState = uiState.videoState,
+            ScanOperationalMode.DATASET_LAB -> DatasetLabSection(
+                uiState = uiState,
                 viewModel = viewModel,
                 detector = detector,
+                onChooseImage = onChooseImage,
                 onChooseVideo = onChooseVideo
             )
         }

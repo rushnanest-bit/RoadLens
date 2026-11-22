@@ -31,6 +31,8 @@ import com.roadlens.app.ai.OnnxYoloDetector
 import com.roadlens.app.ai.RoadDefectDetector
 import com.roadlens.app.data.local.RoadLensDatabase
 import com.roadlens.app.data.repository.RoadInspectionRepository
+import com.roadlens.app.domain.model.DatasetLabSubMode
+import com.roadlens.app.domain.model.ScanOperationalMode
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HomeScreen
 import com.roadlens.app.ui.screens.PlaceholderScreen
@@ -89,6 +91,8 @@ fun RoadLensApp(
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             val bitmap = context.contentResolver.openInputStream(it)?.use { s -> BitmapFactory.decodeStream(s) }
+            viewModel.setOperationalMode(ScanOperationalMode.DATASET_LAB)
+            viewModel.setLabSubMode(DatasetLabSubMode.IMAGE)
             viewModel.analyzeImage(bitmap)
             selectedTab = RoadLensTab.SCAN
         }
@@ -96,6 +100,8 @@ fun RoadLensApp(
 
     val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
+            viewModel.setOperationalMode(ScanOperationalMode.DATASET_LAB)
+            viewModel.setLabSubMode(DatasetLabSubMode.VIDEO)
             viewModel.selectVideo(it)
             selectedTab = RoadLensTab.SCAN
         }

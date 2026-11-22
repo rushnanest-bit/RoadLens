@@ -2,9 +2,10 @@ package com.roadlens.app.ui.viewmodel
 
 import android.graphics.Bitmap
 import com.roadlens.app.ai.RoadDefectDetector
+import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.DetectionResult
 import com.roadlens.app.domain.model.RoadDetection
-import com.roadlens.app.domain.model.ScanInputMode
+import com.roadlens.app.domain.model.ScanOperationalMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,11 +39,19 @@ class ScanViewModelTest {
     }
 
     @Test
-    fun setInputMode_updatesInputModeState() {
-        viewModel.setInputMode(ScanInputMode.VIDEO)
-        assertEquals(ScanInputMode.VIDEO, viewModel.uiState.value.inputMode)
-        viewModel.setInputMode(ScanInputMode.IMAGE)
-        assertEquals(ScanInputMode.IMAGE, viewModel.uiState.value.inputMode)
+    fun setOperationalMode_updatesOperationalModeState() {
+        viewModel.setOperationalMode(ScanOperationalMode.DATASET_LAB)
+        assertEquals(ScanOperationalMode.DATASET_LAB, viewModel.uiState.value.operationalMode)
+        viewModel.setOperationalMode(ScanOperationalMode.LIVE_SCAN)
+        assertEquals(ScanOperationalMode.LIVE_SCAN, viewModel.uiState.value.operationalMode)
+    }
+
+    @Test
+    fun setLabSubMode_updatesDatasetLabSubMode() {
+        viewModel.setLabSubMode(DatasetLabSubMode.VIDEO)
+        assertEquals(DatasetLabSubMode.VIDEO, viewModel.uiState.value.labSubMode)
+        viewModel.setLabSubMode(DatasetLabSubMode.IMAGE)
+        assertEquals(DatasetLabSubMode.IMAGE, viewModel.uiState.value.labSubMode)
     }
 
     @Test

@@ -6,8 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.roadlens.app.ai.RoadDefectDetector
 import com.roadlens.app.data.repository.RoadInspectionRepository
+import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.RoadDetection
-import com.roadlens.app.domain.model.ScanInputMode
+import com.roadlens.app.domain.model.ScanOperationalMode
 import com.roadlens.app.domain.model.VideoDefectRecord
 import com.roadlens.app.domain.util.GeometryUtils
 import com.roadlens.app.domain.util.TimeFormatter
@@ -32,7 +33,9 @@ class ScanViewModel(
     private val _uiState = MutableStateFlow(ScanScreenUiState())
     val uiState: StateFlow<ScanScreenUiState> = _uiState.asStateFlow()
 
-    fun setInputMode(mode: ScanInputMode) = _uiState.update { it.copy(inputMode = mode) }
+    fun setOperationalMode(mode: ScanOperationalMode) = _uiState.update { it.copy(operationalMode = mode) }
+
+    fun setLabSubMode(subMode: DatasetLabSubMode) = _uiState.update { it.copy(labSubMode = subMode) }
 
     fun startCameraScan(vehicleLabel: String = "Fleet-01", routeLabel: String = "Route-A") {
         viewModelScope.launch {
@@ -69,23 +72,16 @@ class ScanViewModel(
 
     fun analyzeImage(bitmap: Bitmap?) {
         if (bitmap == null) {
-            _uiState.update { it.copy(inputMode = ScanInputMode.IMAGE, imageState = ImageScanUiState(statusMessage = "Could not open the selected image.")) }
+            _uiState.update { it.copy(imageState = ImageScanUiState(statusMessage = "Could not open the selected image.")) }
             return
         }
-        _uiState.update { it.copy(inputMode = ScanInputMode.IMAGE, imageState = ImageScanUiState(selectedBitmap = bitmap, isScanning = true, statusMessage = "Detecting road damage in image...")) }
+        _uiState.update { it.copy(imageState = ImageScanUiState(selectedBitmap = bitmap, isScanning = true, statusMessage = "Detecting road damage in image...")) }
         viewModelScope.launch {
             try {
                 val result = withContext(Dispatchers.Default) { detector.detect(bitmap) }
                 val msg = if (result.detections.isEmpty()) "Scan completed. No road defects detected." else "Scan completed. ${result.detections.size} defect(s) detected."
                 _uiState.update { cur ->
-                    cur.copy(
-                        imageState = cur.imageState.copy(detectionResult = result, statusMessage = msg, isScanning = false),
-                        metricsState = cur.metricsState.copy(
-                            totalScans = cur.metricsState.totalScans + 1,
-                            roadHazards = cur.metricsState.roadHazards + result.detections.size,
-                            potholes = cur.metricsState.potholes + result.detections.count { it.classIndex == 3 }
-                        )
-                    )
+                    cur.copy(imageState = cur.imageState.copy(detectionResult = result, statusMessage = msg, isScanning = false))
                 }
             } catch (e: Exception) {
                 _uiState.update { cur -> cur.copy(imageState = cur.imageState.copy(isScanning = false, statusMessage = "Detection failed: ${e.localizedMessage ?: "Unknown error"}")) }
@@ -94,7 +90,7 @@ class ScanViewModel(
     }
 
     fun selectVideo(uri: Uri?) = _uiState.update { cur ->
-        cur.copy(inputMode = ScanInputMode.VIDEO, videoState = VideoScanUiState(selectedVideoUri = uri, isPlaying = uri != null, statusMessage = if (uri != null) "Video playback active." else "No video selected."))
+        cur.copy(videoState = VideoScanUiState(selectedVideoUri = uri, isPlaying = uri != null, statusMessage = if (uri != null) "Video playback active." else "No video selected."))
     }
 
     fun toggleVideoPlay() = _uiState.update { it.copy(videoState = it.videoState.copy(isPlaying = !it.videoState.isPlaying)) }
@@ -151,8 +147,7 @@ class ScanViewModel(
                     cumulativePotholes = currentTimeline.count { it.classIndex == 3 },
                     cumulativeCracks = currentTimeline.count { it.classIndex != 3 },
                     totalFramesScanned = cur.videoState.totalFramesScanned + 1, statusMessage = status
-                ),
-                metricsState = cur.metricsState.copy(roadHazards = totalDefects, potholes = currentTimeline.count { it.classIndex == 3 })
+                )
             )
         }
     }
