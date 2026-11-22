@@ -8,6 +8,20 @@ import com.roadlens.app.domain.model.ScanInputMode
 import com.roadlens.app.domain.model.VideoDefectRecord
 
 /**
+ * Immutable UI state for live CameraX scanning and active session telemetry.
+ * Strictly under 200 lines per project engineering rules.
+ */
+data class CameraScanUiState(
+    val isScanning: Boolean = false,
+    val activeSessionId: String? = null,
+    val liveDetections: List<RoadDetection> = emptyList(),
+    val totalDetectionsInSession: Int = 0,
+    val potholesInSession: Int = 0,
+    val cracksInSession: Int = 0,
+    val statusMessage: String = "Ready to start live road scan."
+)
+
+/**
  * Immutable UI state for static image scanning.
  */
 data class ImageScanUiState(
@@ -48,7 +62,8 @@ data class OverviewMetricsUiState(
  * Unified root UI state for RoadLens scanning features.
  */
 data class ScanScreenUiState(
-    val inputMode: ScanInputMode = ScanInputMode.IMAGE,
+    val inputMode: ScanInputMode = ScanInputMode.CAMERA,
+    val cameraState: CameraScanUiState = CameraScanUiState(),
     val imageState: ImageScanUiState = ImageScanUiState(),
     val videoState: VideoScanUiState = VideoScanUiState(),
     val metricsState: OverviewMetricsUiState = OverviewMetricsUiState()
