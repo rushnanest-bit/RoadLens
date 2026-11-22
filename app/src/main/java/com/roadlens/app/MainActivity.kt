@@ -29,6 +29,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.roadlens.app.ai.OnnxYoloDetector
 import com.roadlens.app.ai.RoadDefectDetector
+import com.roadlens.app.data.local.RoadLensDatabase
+import com.roadlens.app.data.repository.RoadInspectionRepository
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HomeScreen
 import com.roadlens.app.ui.screens.PlaceholderScreen
@@ -43,18 +45,21 @@ import com.roadlens.app.ui.viewmodel.ScanViewModel
 class MainActivity : ComponentActivity() {
 
     private lateinit var yoloDetector: RoadDefectDetector
+    private lateinit var repository: RoadInspectionRepository
 
     private val scanViewModel: ScanViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ScanViewModel(yoloDetector) as T
+                return ScanViewModel(yoloDetector, repository) as T
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val database = RoadLensDatabase.getInstance(applicationContext)
+        repository = RoadInspectionRepository(database)
         yoloDetector = OnnxYoloDetector(applicationContext)
 
         setContent {
