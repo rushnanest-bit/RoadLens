@@ -6,20 +6,18 @@ package com.roadlens.app.domain.model
  * Strictly under 200 lines per project engineering rules.
  */
 enum class ScanOperationalMode(
-    val title: String,
-    val icon: String
+    val title: String
 ) {
-    LIVE_SCAN(title = "Live Fleet Scan", icon = "📷"),
-    DATASET_LAB(title = "Dataset Lab", icon = "🧪")
+    LIVE_SCAN(title = "Live Fleet Scan"),
+    DATASET_LAB(title = "Dataset Lab")
 }
 
 /**
  * Benchmark media types available within the Dataset Lab evaluation section.
  */
 enum class DatasetLabSubMode(
-    val title: String,
-    val icon: String
+    val title: String
 ) {
-    IMAGE(title = "Static Image", icon = "🖼"),
-    VIDEO(title = "Video Replay", icon = "▶")
+    IMAGE(title = "Static Image"),
+    VIDEO(title = "Video Replay")
 }

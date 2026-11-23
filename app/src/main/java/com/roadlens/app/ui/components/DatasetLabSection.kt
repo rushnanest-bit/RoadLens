@@ -53,7 +53,7 @@ fun DatasetLabSection(
         ) {
             Column {
                 Text(
-                    text = "🧪 Dataset Lab & Indoor Benchmarks",
+                    text = "Dataset Lab & Indoor Benchmarks",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = testAmber
@@ -79,7 +79,7 @@ fun DatasetLabSection(
                 Tab(
                     selected = uiState.labSubMode == subMode,
                     onClick = { viewModel.setLabSubMode(subMode) },
-                    text = { Text("${subMode.icon} ${subMode.title}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                    text = { Text(subMode.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
                 )
             }
         }

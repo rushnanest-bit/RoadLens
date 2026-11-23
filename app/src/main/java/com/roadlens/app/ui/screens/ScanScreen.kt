@@ -56,7 +56,7 @@ fun ScanScreen(
                 Tab(
                     selected = uiState.operationalMode == mode,
                     onClick = { viewModel.setOperationalMode(mode) },
-                    text = { Text("${mode.icon} ${mode.title}", fontWeight = FontWeight.Bold) }
+                    text = { Text(mode.title, fontWeight = FontWeight.Bold) }
                 )
             }
         }
