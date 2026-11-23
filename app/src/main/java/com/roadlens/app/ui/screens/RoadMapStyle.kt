@@ -4,24 +4,47 @@ import org.maplibre.android.maps.Style
 
 /**
  * Map style configuration for MapLibre Native.
- * Uses MapLibre's verified public demo style by default to avoid watermark restrictions.
- * Supports configurable custom style URIs and API keys for production street tile providers (e.g. MapTiler).
+ * Uses OpenStreetMap standard street tiles for crisp street, highway, and local detail.
  * Strictly under 200 lines per project engineering rules.
  */
 object RoadMapStyle {
 
     /**
-     * Officially hosted, verified MapLibre demo style requiring zero API keys.
+     * Standard OpenStreetMap raster style JSON with street-level resolution up to zoom level 19.
+     * Completely free, public, and requires zero API keys.
      */
-    const val DEMO_STYLE_URI: String = "https://demotiles.maplibre.org/style.json"
+    val OSM_STREET_STYLE_JSON: String = """
+    {
+      "version": 8,
+      "name": "OpenStreetMap Street",
+      "sources": {
+        "osm-tiles": {
+          "type": "raster",
+          "tiles": [
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ],
+          "tileSize": 256,
+          "attribution": "© OpenStreetMap contributors",
+          "maxzoom": 19
+        }
+      },
+      "layers": [
+        {
+          "id": "osm-tiles-layer",
+          "type": "raster",
+          "source": "osm-tiles",
+          "minzoom": 0,
+          "maxzoom": 19
+        }
+      ]
+    }
+    """.trimIndent()
 
-    /**
-     * Builds a Style.Builder for MapLibre.
-     * If [customStyleUri] is provided (e.g. MapTiler Streets or self-hosted vector tiles), it is loaded;
-     * otherwise, it falls back to [DEMO_STYLE_URI].
-     */
     fun createStyleBuilder(customStyleUri: String? = null): Style.Builder {
-        val uri = customStyleUri?.takeIf { it.isNotBlank() } ?: DEMO_STYLE_URI
-        return Style.Builder().fromUri(uri)
+        return if (!customStyleUri.isNullOrBlank()) {
+            Style.Builder().fromUri(customStyleUri)
+        } else {
+            Style.Builder().fromJson(OSM_STREET_STYLE_JSON)
+        }
     }
 }
