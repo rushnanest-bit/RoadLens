@@ -28,11 +28,14 @@ import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.ScanOperationalMode
 import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
+import com.roadlens.app.ui.screens.HazardMapScreen
 import com.roadlens.app.ui.screens.HomeScreen
 import com.roadlens.app.ui.screens.PlaceholderScreen
 import com.roadlens.app.ui.screens.ScanScreen
 import com.roadlens.app.ui.theme.RoadLensTheme
+import com.roadlens.app.ui.viewmodel.MapViewModel
 import com.roadlens.app.ui.viewmodel.ScanViewModel
+import org.maplibre.android.MapLibre
 
 /**
  * Main application entry point for RoadLens.
@@ -52,15 +55,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val mapViewModel: MapViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return MapViewModel(repository) as T
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MapLibre.getInstance(this)
         val database = RoadLensDatabase.getInstance(applicationContext)
         repository = RoadInspectionRepository(database)
         yoloDetector = OnnxYoloDetector(applicationContext)
 
         setContent {
             RoadLensTheme {
-                RoadLensApp(viewModel = scanViewModel, detector = yoloDetector)
+                RoadLensApp(
+                    viewModel = scanViewModel,
+                    mapViewModel = mapViewModel,
+                    detector = yoloDetector
+                )
             }
         }
     }
@@ -76,6 +93,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RoadLensApp(
     viewModel: ScanViewModel,
+    mapViewModel: MapViewModel,
     detector: RoadDefectDetector
 ) {
     val context = LocalContext.current
@@ -124,9 +142,8 @@ fun RoadLensApp(
                 onChooseVideo = { videoLauncher.launch("video/*") },
                 modifier = Modifier.padding(innerPadding)
             )
-            RoadLensTab.MAP -> PlaceholderScreen(
-                title = "Hazard Map",
-                description = "Detected road hazards will be displayed on the map here.",
+            RoadLensTab.MAP -> HazardMapScreen(
+                viewModel = mapViewModel,
                 modifier = Modifier.padding(innerPadding)
             )
             RoadLensTab.REPORT -> PlaceholderScreen(
