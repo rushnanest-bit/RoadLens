@@ -58,7 +58,8 @@ class MapViewModelTest {
     private val sampleEvents = listOf(
         DetectionEventEntity(eventId = 1, sessionId = "s1", capturedAt = 1000L, classId = 3, className = "Pothole (D40)", confidence = 0.9f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9716, longitude = 77.5946, reviewStatus = "PENDING"),
         DetectionEventEntity(eventId = 2, sessionId = "s1", capturedAt = 1200L, classId = 0, className = "Longitudinal Crack (D00)", confidence = 0.8f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9720, longitude = 77.5950, reviewStatus = "CONFIRMED"),
-        DetectionEventEntity(eventId = 3, sessionId = "s1", capturedAt = 1400L, classId = 3, className = "Pothole (D40)", confidence = 0.85f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = null, longitude = null, reviewStatus = "PENDING") // unlocated
+        DetectionEventEntity(eventId = 3, sessionId = "s1", capturedAt = 1400L, classId = 3, className = "Pothole (D40)", confidence = 0.85f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = null, longitude = null, reviewStatus = "PENDING"), // unlocated
+        DetectionEventEntity(eventId = 4, sessionId = "s1", capturedAt = 1600L, classId = 9, className = "Manhole Defect", confidence = 0.75f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9730, longitude = 77.5960, reviewStatus = "PENDING")
     )
 
     @Before
@@ -81,8 +82,8 @@ class MapViewModelTest {
     fun hazards_filtersOutEventsWithoutCoordinates() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         val list = viewModel.hazards.value
-        // Out of 3 sample events, 1 has null coordinates, so only 2 should be returned
-        assertEquals(2, list.size)
+        // Out of 4 sample events, 1 has null coordinates, so 3 should be returned
+        assertEquals(3, list.size)
         assertTrue(list.all { it.latitude != null && it.longitude != null })
     }
 
@@ -109,14 +110,25 @@ class MapViewModelTest {
     }
 
     @Test
+    fun setFilter_other_returnsOnlyOtherHazards() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(MapFilterType.OTHER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val list = viewModel.hazards.value
+        assertEquals(1, list.size)
+        assertEquals(9, list.first().classId)
+    }
+
+    @Test
     fun setFilter_pending_returnsOnlyPendingStatus() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(MapFilterType.PENDING)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val list = viewModel.hazards.value
-        assertEquals(1, list.size)
-        assertEquals("PENDING", list.first().reviewStatus)
+        assertEquals(2, list.size)
+        assertTrue(list.all { it.reviewStatus == "PENDING" })
     }
 
     @Test

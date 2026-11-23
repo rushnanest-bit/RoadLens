@@ -1,10 +1,11 @@
 package com.roadlens.app.ui.screens
 
-import androidx.compose.foundation.horizontalScroll
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,25 +15,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.roadlens.app.data.local.entity.DetectionEventEntity
-import com.roadlens.app.domain.model.MapFilterType
+import com.roadlens.app.data.location.LocationTracker
 import com.roadlens.app.ui.components.HazardDetailCard
+import com.roadlens.app.ui.components.MapEmptyStateBadge
+import com.roadlens.app.ui.components.MapTopFilterBar
 import com.roadlens.app.ui.viewmodel.MapViewModel
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
-import org.maplibre.android.annotations.MarkerOptions
 
 /**
- * Interactive Hazard Map screen powered by MapLibre Native Android.
- * Plots offline-cached vector tiles and road hazard defect pins per FR-10.
+ * Modern road hazard map screen powered by MapLibre Native Android.
+ * Features high-contrast street cartography, categorized hazard pins, and live GPS centering.
  * Strictly under 200 lines per project engineering rules.
  */
+@Suppress("DEPRECATION")
 @Composable
 fun HazardMapScreen(
     viewModel: MapViewModel,
@@ -44,22 +49,53 @@ fun HazardMapScreen(
     val hazards by viewModel.hazards.collectAsState()
     val selectedHazard by viewModel.selectedHazard.collectAsState()
 
+    val locationTracker = remember { LocationTracker(context) }
+    val userLocation by locationTracker.currentLocation.collectAsState()
+    val hasLocationPermission = remember {
+        (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) ||
+            (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+    }
+
     var maplibreMapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
     val mapView = remember { MapView(context) }
+    var hasCenteredInitialLocation by remember { mutableStateOf(false) }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, hasLocationPermission) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_RESUME -> {
+                    mapView.onResume()
+                    if (hasLocationPermission) locationTracker.startTracking()
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    mapView.onPause()
+                    locationTracker.stopTracking()
+                }
                 Lifecycle.Event.ON_STOP -> mapView.onStop()
                 Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); mapView.onDestroy() }
+        if (hasLocationPermission) locationTracker.startTracking()
+        onDispose {
+            locationTracker.stopTracking()
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onDestroy()
+        }
+    }
+
+    LaunchedEffect(userLocation, hazards, maplibreMapInstance) {
+        val map = maplibreMapInstance ?: return@LaunchedEffect
+        if (!hasCenteredInitialLocation) {
+            val target = userLocation?.let { LatLng(it.latitude, it.longitude) }
+                ?: hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
+            if (target != null) {
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
+                hasCenteredInitialLocation = true
+            }
+        }
     }
 
     LaunchedEffect(hazards, maplibreMapInstance) {
@@ -68,21 +104,18 @@ fun HazardMapScreen(
         hazards.forEach { hazard ->
             val lat = hazard.latitude ?: return@forEach
             val lon = hazard.longitude ?: return@forEach
+            val icon = HazardMapIconHelper.getIconForClass(context, hazard.classId)
             map.addMarker(
                 MarkerOptions()
                     .position(LatLng(lat, lon))
+                    .icon(icon)
                     .title("${hazard.className} (#${hazard.eventId})")
                     .snippet("${(hazard.confidence * 100).toInt()}% • ${hazard.reviewStatus}")
             )
         }
-        hazards.firstOrNull()?.let {
-            val lat = it.latitude ?: 12.9716
-            val lon = it.longitude ?: 77.5946
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 13.0))
-        }
     }
 
-    val brandGreen = Color(0xFF1E3A2F)
+    val primaryGreen = Color(0xFF173D32)
 
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
@@ -91,7 +124,11 @@ fun HazardMapScreen(
                     onCreate(null)
                     getMapAsync { map ->
                         maplibreMapInstance = map
-                        map.setStyle(Style.Builder().fromUri("https://demotiles.maplibre.org/style.json"))
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(LatLng(12.9716, 77.5946))
+                            .zoom(14.5)
+                            .build()
+                        map.setStyle(Style.Builder().fromJson(RoadMapStyle.STREET_STYLE_JSON))
                         map.setOnMarkerClickListener { marker ->
                             val clicked = hazards.firstOrNull { marker.title?.contains("#${it.eventId}") == true }
                             viewModel.selectHazard(clicked)
@@ -103,69 +140,34 @@ fun HazardMapScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Top Filter Bar & Offline Notice
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 12.dp, end = 12.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White.copy(alpha = 0.95f),
-                shadowElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("MAPLIBRE NATIVE • VECTOR CACHE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = brandGreen)
-                }
-            }
+        MapTopFilterBar(
+            hazardCount = hazards.size,
+            currentFilter = filter,
+            onFilterSelected = { viewModel.setFilter(it) },
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
 
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.horizontalScroll(rememberScrollState())
-            ) {
-                MapFilterType.entries.forEach { f ->
-                    FilterChip(
-                        selected = filter == f,
-                        onClick = { viewModel.setFilter(f) },
-                        label = { Text(f.title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = brandGreen,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-            }
-        }
-
-        // Empty state badge if no hazards are localized
         if (hazards.isEmpty()) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color.White.copy(alpha = 0.92f),
-                shadowElevation = 6.dp,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(32.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No Geo-Tagged Hazards", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = brandGreen)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Detections with GPS accuracy <= 25m will plot hazard pins here automatically.",
-                        fontSize = 12.sp,
-                        color = Color(0xFF6B7280),
-                        lineHeight = 16.sp
-                    )
-                }
-            }
+            MapEmptyStateBadge(modifier = Modifier.align(Alignment.BottomStart))
         }
 
-        // Bottom Hazard Inspection Detail Card
+        FloatingActionButton(
+            onClick = {
+                val target = userLocation?.let { LatLng(it.latitude, it.longitude) }
+                    ?: hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
+                    ?: LatLng(12.9716, 77.5946)
+                maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
+            },
+            containerColor = primaryGreen,
+            contentColor = Color.White,
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = if (selectedHazard != null) 280.dp else 20.dp)
+        ) {
+            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        }
+
         selectedHazard?.let { hazard ->
             HazardDetailCard(
                 hazard = hazard,
@@ -173,23 +175,6 @@ fun HazardMapScreen(
                 onUpdateReview = { status -> viewModel.updateReview(hazard.eventId, status) },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
-        }
-
-        // Recenter / Location FAB
-        FloatingActionButton(
-            onClick = {
-                val target = hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
-                    ?: LatLng(12.9716, 77.5946)
-                maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 14.0))
-            },
-            containerColor = brandGreen,
-            contentColor = Color.White,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = if (selectedHazard != null) 250.dp else 16.dp)
-        ) {
-            Text("⌖", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

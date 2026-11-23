@@ -6,7 +6,8 @@ package com.roadlens.app.domain.model
  */
 enum class MapFilterType(val title: String) {
     ALL("All Hazards"),
-    POTHOLES("Potholes (D40)"),
-    CRACKS("Cracks (D00-D20)"),
+    POTHOLES("Potholes"),
+    CRACKS("Cracks"),
+    OTHER("Other Hazards"),
     PENDING("Pending Review")
 }

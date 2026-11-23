@@ -35,7 +35,8 @@ class MapViewModel(
         when (currentFilter) {
             MapFilterType.ALL -> locatedEvents
             MapFilterType.POTHOLES -> locatedEvents.filter { it.classId == 3 }
-            MapFilterType.CRACKS -> locatedEvents.filter { it.classId != 3 }
+            MapFilterType.CRACKS -> locatedEvents.filter { it.classId in listOf(0, 1, 2) }
+            MapFilterType.OTHER -> locatedEvents.filter { it.classId !in listOf(0, 1, 2, 3) }
             MapFilterType.PENDING -> locatedEvents.filter { it.reviewStatus == "PENDING" }
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
