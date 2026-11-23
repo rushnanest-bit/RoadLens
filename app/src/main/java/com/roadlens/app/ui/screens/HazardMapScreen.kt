@@ -2,6 +2,8 @@ package com.roadlens.app.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
@@ -24,6 +26,7 @@ import com.roadlens.app.ui.components.HazardDetailCard
 import com.roadlens.app.ui.components.MapEmptyStateBadge
 import com.roadlens.app.ui.components.MapTopFilterBar
 import com.roadlens.app.ui.viewmodel.MapViewModel
+import kotlinx.coroutines.launch
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -32,8 +35,8 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
 /**
- * Modern road hazard map screen powered by MapLibre Native Android.
- * Features high-contrast street cartography, categorized hazard pins, and live GPS centering.
+ * Modern dark-themed hazard map screen powered by MapLibre Native Android.
+ * Features ArcGIS World Dark Gray cartography, search location geocoding, and live GPS centering.
  * Strictly under 200 lines per project engineering rules.
  */
 @Suppress("DEPRECATION")
@@ -44,6 +47,7 @@ fun HazardMapScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
     val filter by viewModel.filter.collectAsState()
     val hazards by viewModel.hazards.collectAsState()
     val selectedHazard by viewModel.selectedHazard.collectAsState()
@@ -58,19 +62,14 @@ fun HazardMapScreen(
     var maplibreMapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
     val mapView = remember { MapView(context) }
     var hasCenteredInitialLocation by remember { mutableStateOf(false) }
+    var isSearching by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner, hasLocationPermission) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> {
-                    mapView.onResume()
-                    if (hasLocationPermission) locationTracker.startTracking()
-                }
-                Lifecycle.Event.ON_PAUSE -> {
-                    mapView.onPause()
-                    locationTracker.stopTracking()
-                }
+                Lifecycle.Event.ON_RESUME -> { mapView.onResume(); if (hasLocationPermission) locationTracker.startTracking() }
+                Lifecycle.Event.ON_PAUSE -> { mapView.onPause(); locationTracker.stopTracking() }
                 Lifecycle.Event.ON_STOP -> mapView.onStop()
                 Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
                 else -> Unit
@@ -114,8 +113,6 @@ fun HazardMapScreen(
         }
     }
 
-    val primaryGreen = Color(0xFF173D32)
-
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
             factory = {
@@ -143,6 +140,20 @@ fun HazardMapScreen(
             hazardCount = hazards.size,
             currentFilter = filter,
             onFilterSelected = { viewModel.setFilter(it) },
+            isSearching = isSearching,
+            onSearchLocation = { query ->
+                coroutineScope.launch {
+                    isSearching = true
+                    val res = LocationSearchHelper.searchLocation(context, query)
+                    isSearching = false
+                    if (res != null) {
+                        maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(res.latitude, res.longitude), 15.0))
+                        Toast.makeText(context, "Located: ${res.title}", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Location not found: $query", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -157,14 +168,15 @@ fun HazardMapScreen(
                     ?: LatLng(12.9716, 77.5946)
                 maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
             },
-            containerColor = primaryGreen,
+            containerColor = Color(0xFF18181B),
             contentColor = Color.White,
             shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = if (selectedHazard != null) 280.dp else 20.dp)
+                .border(1.dp, Color(0xFF10B981), CircleShape)
         ) {
-            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
         }
 
         selectedHazard?.let { hazard ->

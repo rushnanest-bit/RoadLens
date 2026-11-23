@@ -3,48 +3,20 @@ package com.roadlens.app.ui.screens
 import org.maplibre.android.maps.Style
 
 /**
- * Map style configuration for MapLibre Native.
- * Uses OpenStreetMap standard street tiles for crisp street, highway, and local detail.
+ * Enterprise dark theme map style configuration for MapLibre Native.
+ * Features Dark Matter vector cartography with high-visibility roads and labels.
  * Strictly under 200 lines per project engineering rules.
  */
 object RoadMapStyle {
 
     /**
-     * Standard OpenStreetMap raster style JSON with street-level resolution up to zoom level 19.
-     * Completely free, public, and requires zero API keys.
+     * Standard Dark Matter vector tile style JSON URI.
+     * High-contrast dark asphalt theme with crisp street networks and road labels.
      */
-    val OSM_STREET_STYLE_JSON: String = """
-    {
-      "version": 8,
-      "name": "OpenStreetMap Street",
-      "sources": {
-        "osm-tiles": {
-          "type": "raster",
-          "tiles": [
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          ],
-          "tileSize": 256,
-          "attribution": "© OpenStreetMap contributors",
-          "maxzoom": 19
-        }
-      },
-      "layers": [
-        {
-          "id": "osm-tiles-layer",
-          "type": "raster",
-          "source": "osm-tiles",
-          "minzoom": 0,
-          "maxzoom": 19
-        }
-      ]
-    }
-    """.trimIndent()
+    const val DARK_MATTER_STYLE_URI: String = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
     fun createStyleBuilder(customStyleUri: String? = null): Style.Builder {
-        return if (!customStyleUri.isNullOrBlank()) {
-            Style.Builder().fromUri(customStyleUri)
-        } else {
-            Style.Builder().fromJson(OSM_STREET_STYLE_JSON)
-        }
+        val uri = customStyleUri?.takeIf { it.isNotBlank() } ?: DARK_MATTER_STYLE_URI
+        return Style.Builder().fromUri(uri)
     }
 }
