@@ -1,43 +1,27 @@
 package com.roadlens.app.ui.screens
 
+import org.maplibre.android.maps.Style
+
 /**
- * Modern street map style definition for MapLibre Native.
- * Delivers clean street-level cartography with clearly visible roads, streets,
- * and local geographical features without requiring proprietary API keys.
+ * Map style configuration for MapLibre Native.
+ * Uses MapLibre's verified public demo style by default to avoid watermark restrictions.
+ * Supports configurable custom style URIs and API keys for production street tile providers (e.g. MapTiler).
  * Strictly under 200 lines per project engineering rules.
  */
 object RoadMapStyle {
 
     /**
-     * Standard Carto Voyager / OpenStreetMap raster tile style JSON.
-     * High-contrast, clean navigation palette optimized for road inspection overlays.
+     * Officially hosted, verified MapLibre demo style requiring zero API keys.
      */
-    val STREET_STYLE_JSON: String = """
-    {
-      "version": 8,
-      "name": "RoadLens Street Map",
-      "sources": {
-        "street-tiles": {
-          "type": "raster",
-          "tiles": [
-            "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-          ],
-          "tileSize": 256,
-          "attribution": "© CartoDB, © OpenStreetMap contributors"
-        }
-      },
-      "layers": [
-        {
-          "id": "street-tiles-layer",
-          "type": "raster",
-          "source": "street-tiles",
-          "minzoom": 0,
-          "maxzoom": 20
-        }
-      ]
+    const val DEMO_STYLE_URI: String = "https://demotiles.maplibre.org/style.json"
+
+    /**
+     * Builds a Style.Builder for MapLibre.
+     * If [customStyleUri] is provided (e.g. MapTiler Streets or self-hosted vector tiles), it is loaded;
+     * otherwise, it falls back to [DEMO_STYLE_URI].
+     */
+    fun createStyleBuilder(customStyleUri: String? = null): Style.Builder {
+        val uri = customStyleUri?.takeIf { it.isNotBlank() } ?: DEMO_STYLE_URI
+        return Style.Builder().fromUri(uri)
     }
-    """.trimIndent()
 }

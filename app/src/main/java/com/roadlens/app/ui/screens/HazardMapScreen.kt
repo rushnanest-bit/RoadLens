@@ -30,7 +30,6 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
 
 /**
  * Modern road hazard map screen powered by MapLibre Native Android.
@@ -128,7 +127,7 @@ fun HazardMapScreen(
                             .target(LatLng(12.9716, 77.5946))
                             .zoom(14.5)
                             .build()
-                        map.setStyle(Style.Builder().fromJson(RoadMapStyle.STREET_STYLE_JSON))
+                        map.setStyle(RoadMapStyle.createStyleBuilder())
                         map.setOnMarkerClickListener { marker ->
                             val clicked = hazards.firstOrNull { marker.title?.contains("#${it.eventId}") == true }
                             viewModel.selectHazard(clicked)
