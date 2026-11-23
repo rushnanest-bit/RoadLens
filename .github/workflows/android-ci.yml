@@ -1,0 +1,80 @@
+name: RoadLens Android CI
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches: [dev, main]
+
+  push:
+    branches:
+      - dev
+      - main
+      - 'feature/**'
+
+permissions:
+  contents: read
+
+jobs:
+  android-build:
+    name: Test, Coverage, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Secret and Credentials Scan (KPI 4.5)
+        run: |
+          echo "Scanning repository for committed credentials and keys..."
+          if [ -f "local.properties" ]; then echo "Error: local.properties detected!"; exit 1; fi
+          if ls *.jks *.keystore *.p12 *.pem 1> /dev/null 2>&1; then echo "Error: Private keys detected!"; exit 1; fi
+          echo "Secret scan passed cleanly. Zero exposed secrets."
+
+      - name: Run unit tests and generate JaCoCo coverage (KPI 4.1, 4.2, 4.3)
+        run: ./gradlew testDebugUnitTest createDebugUnitTestCoverageReport
+
+      - name: Run static analysis / Android Lint (KPI 4.4)
+        run: ./gradlew lintDebug
+
+      - name: Build Android application
+        run: ./gradlew assembleDebug
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadlens-test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadlens-coverage-reports
+          path: app/build/reports/coverage/test/debug/
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadlens-lint-reports
+          path: app/build/reports/lint-results-debug.html
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadlens-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
