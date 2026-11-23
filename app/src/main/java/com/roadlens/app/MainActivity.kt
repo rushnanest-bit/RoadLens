@@ -8,11 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,9 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.roadlens.app.ai.OnnxYoloDetector
@@ -33,6 +26,8 @@ import com.roadlens.app.data.local.RoadLensDatabase
 import com.roadlens.app.data.repository.RoadInspectionRepository
 import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.ScanOperationalMode
+import com.roadlens.app.ui.components.AddVehicleDialog
+import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HomeScreen
 import com.roadlens.app.ui.screens.PlaceholderScreen
@@ -87,6 +82,7 @@ fun RoadLensApp(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(RoadLensTab.HOME) }
+    var showAddVehicleDialog by remember { mutableStateOf(false) }
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -107,31 +103,30 @@ fun RoadLensApp(
         }
     }
 
-    val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    if (showAddVehicleDialog) {
+        AddVehicleDialog(
+            onDismiss = { showAddVehicleDialog = false },
+            onVehicleRegistered = { regNum ->
+                viewModel.registerVehicle(regNum)
+                showAddVehicleDialog = false
+            }
+        )
+    }
 
     Scaffold(
         containerColor = Color(0xFFF3F5EE),
         bottomBar = {
-            NavigationBar(containerColor = Color.White, contentColor = brandGreen, tonalElevation = 8.dp) {
-                RoadLensTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = { Text(tab.symbol, fontSize = 21.sp, fontWeight = FontWeight.Bold) },
-                        label = { Text(tab.title, fontSize = 11.sp, fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Medium) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = brandGreen, selectedTextColor = brandGreen,
-                            indicatorColor = brandLime.copy(alpha = 0.35f), unselectedIconColor = Color(0xFF9CA3AF), unselectedTextColor = Color(0xFF9CA3AF)
-                        )
-                    )
-                }
-            }
+            RoadLensBottomBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                onAddNewVehicle = { showAddVehicleDialog = true }
+            )
         }
     ) { innerPadding ->
         when (selectedTab) {
             RoadLensTab.HOME -> HomeScreen(
                 metrics = uiState.metricsState,
+                vehicleRegistration = uiState.vehicleRegistration,
                 onStartScan = { selectedTab = RoadLensTab.SCAN },
                 modifier = Modifier.padding(innerPadding)
             )

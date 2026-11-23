@@ -55,6 +55,20 @@ class ScanViewModelTest {
     }
 
     @Test
+    fun registerVehicle_validRegistration_updatesActiveVehicleAndList() {
+        viewModel.registerVehicle("dl-04-cd-5678")
+        assertEquals("DL-04-CD-5678", viewModel.uiState.value.vehicleRegistration)
+        assertTrue(viewModel.uiState.value.registeredVehicles.contains("DL-04-CD-5678"))
+    }
+
+    @Test
+    fun registerVehicle_blankRegistration_ignoresUpdate() {
+        val initial = viewModel.uiState.value.vehicleRegistration
+        viewModel.registerVehicle("   ")
+        assertEquals(initial, viewModel.uiState.value.vehicleRegistration)
+    }
+
+    @Test
     fun toggleVideoPlay_switchesPlayingState() {
         assertFalse(viewModel.uiState.value.videoState.isPlaying)
         viewModel.toggleVideoPlay()

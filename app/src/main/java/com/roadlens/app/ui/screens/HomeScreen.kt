@@ -37,6 +37,7 @@ import com.roadlens.app.ui.viewmodel.OverviewMetricsUiState
 @Composable
 fun HomeScreen(
     metrics: OverviewMetricsUiState,
+    vehicleRegistration: String = "KA-01-AB-1234",
     onStartScan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -58,7 +59,7 @@ fun HomeScreen(
         ) {
             Column {
                 Text("ROADLENS", color = brandGreen, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                Text("FLEET INTELLIGENCE", color = Color(0xFF6B7280), fontSize = 9.sp, letterSpacing = 2.sp)
+                Text("FLEET INTELLIGENCE • $vehicleRegistration", color = Color(0xFF4B5563), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
             }
             Surface(shape = CircleShape, color = brandGreen, modifier = Modifier.size(45.dp)) {
                 Box(contentAlignment = Alignment.Center) {

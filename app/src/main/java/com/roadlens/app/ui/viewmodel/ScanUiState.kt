@@ -65,6 +65,8 @@ data class OverviewMetricsUiState(
 data class ScanScreenUiState(
     val operationalMode: ScanOperationalMode = ScanOperationalMode.LIVE_SCAN,
     val labSubMode: DatasetLabSubMode = DatasetLabSubMode.IMAGE,
+    val vehicleRegistration: String = "KA-01-AB-1234",
+    val registeredVehicles: List<String> = listOf("KA-01-AB-1234"),
     val cameraState: CameraScanUiState = CameraScanUiState(),
     val imageState: ImageScanUiState = ImageScanUiState(),
     val videoState: VideoScanUiState = VideoScanUiState(),

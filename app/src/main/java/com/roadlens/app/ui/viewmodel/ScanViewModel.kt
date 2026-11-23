@@ -37,10 +37,25 @@ class ScanViewModel(
 
     fun setLabSubMode(subMode: DatasetLabSubMode) = _uiState.update { it.copy(labSubMode = subMode) }
 
-    fun startCameraScan(vehicleLabel: String = "Fleet-01", routeLabel: String = "Route-A") {
+    fun registerVehicle(regNumber: String) {
+        val cleaned = regNumber.trim().uppercase()
+        if (cleaned.isNotBlank()) {
+            _uiState.update { cur ->
+                val list = (cur.registeredVehicles + cleaned).distinct()
+                cur.copy(
+                    vehicleRegistration = cleaned,
+                    registeredVehicles = list,
+                    cameraState = cur.cameraState.copy(statusMessage = "Active vehicle: $cleaned. Ready to scan.")
+                )
+            }
+        }
+    }
+
+    fun startCameraScan(vehicleLabel: String? = null, routeLabel: String = "Route-A") {
+        val activeVehicle = vehicleLabel ?: _uiState.value.vehicleRegistration
         viewModelScope.launch {
-            val sid = repository?.startSession(vehicleLabel, routeLabel, "CAMERA") ?: "camera-session"
-            _uiState.update { it.copy(cameraState = it.cameraState.copy(isScanning = true, activeSessionId = sid, statusMessage = "Live scanning active (1 FPS). Monitoring road.")) }
+            val sid = repository?.startSession(activeVehicle, routeLabel, "CAMERA") ?: "camera-session"
+            _uiState.update { it.copy(cameraState = it.cameraState.copy(isScanning = true, activeSessionId = sid, statusMessage = "Scanning as $activeVehicle (1 FPS). Monitoring road.")) }
         }
     }
 
