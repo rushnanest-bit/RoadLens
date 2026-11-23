@@ -113,7 +113,6 @@ fun RoadLensApp(
         when (selectedTab) {
             RoadLensTab.HOME -> HomeScreen(
                 metrics = uiState.metricsState,
-                vehicleRegistration = uiState.vehicleRegistration,
                 onStartScan = { selectedTab = RoadLensTab.SCAN },
                 modifier = Modifier.padding(innerPadding)
             )
