@@ -16,6 +16,11 @@ typealias DetectionResult = com.roadlens.app.domain.model.DetectionResult
 interface RoadDefectDetector : Closeable {
 
     /**
+     * Verifies if the underlying neural network weights and runtime session are active.
+     */
+    fun isModelLoaded(): Boolean = true
+
+    /**
      * Executes fast inference on a single image frame, returning only bounding box detections.
      * Ideal for real-time video streaming where canvas allocation overhead must be avoided.
      *

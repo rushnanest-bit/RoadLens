@@ -26,7 +26,6 @@ import com.roadlens.app.data.local.RoadLensDatabase
 import com.roadlens.app.data.repository.RoadInspectionRepository
 import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.ScanOperationalMode
-import com.roadlens.app.ui.components.AddVehicleDialog
 import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HomeScreen
@@ -82,7 +81,6 @@ fun RoadLensApp(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(RoadLensTab.HOME) }
-    var showAddVehicleDialog by remember { mutableStateOf(false) }
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -103,23 +101,12 @@ fun RoadLensApp(
         }
     }
 
-    if (showAddVehicleDialog) {
-        AddVehicleDialog(
-            onDismiss = { showAddVehicleDialog = false },
-            onVehicleRegistered = { regNum ->
-                viewModel.registerVehicle(regNum)
-                showAddVehicleDialog = false
-            }
-        )
-    }
-
     Scaffold(
         containerColor = Color(0xFFF3F5EE),
         bottomBar = {
             RoadLensBottomBar(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                onAddNewVehicle = { showAddVehicleDialog = true }
+                onTabSelected = { selectedTab = it }
             )
         }
     ) { innerPadding ->

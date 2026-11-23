@@ -22,21 +22,35 @@ class RoadInspectionRepository(
     val totalPotholes: Flow<Int> = eventDao.getPotholesCount()
     val pendingReviews: Flow<Int> = eventDao.getPendingReviewCount()
 
-    suspend fun startSession(vehicleLabel: String, routeLabel: String, sourceMode: String): String {
+    suspend fun startSession(
+        vehicleLabel: String,
+        routeLabel: String,
+        sourceMode: String,
+        startLocation: String? = null
+    ): String {
         val sessionId = UUID.randomUUID().toString()
         val session = ScanSessionEntity(
             sessionId = sessionId,
             vehicleLabel = vehicleLabel,
             routeLabel = routeLabel,
             startedAt = System.currentTimeMillis(),
-            sourceMode = sourceMode
+            sourceMode = sourceMode,
+            startLocation = startLocation
         )
         sessionDao.insertSession(session)
         return sessionId
     }
 
-    suspend fun finishSession(sessionId: String) {
-        sessionDao.finishSession(sessionId, status = "COMPLETED", endedAt = System.currentTimeMillis())
+    suspend fun finishSession(sessionId: String, stopLocation: String? = null) {
+        if (stopLocation != null) {
+            sessionDao.finishSessionWithLocation(sessionId, status = "COMPLETED", endedAt = System.currentTimeMillis(), stopLocation = stopLocation)
+        } else {
+            sessionDao.finishSession(sessionId, status = "COMPLETED", endedAt = System.currentTimeMillis())
+        }
+    }
+
+    suspend fun updateSessionStatus(sessionId: String, status: String) {
+        sessionDao.updateSessionStatus(sessionId, status)
     }
 
     suspend fun recordDetections(

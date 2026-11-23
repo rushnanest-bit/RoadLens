@@ -21,7 +21,7 @@ import com.roadlens.app.data.local.entity.ScanSessionEntity
         DetectionEventEntity::class,
         HazardClusterEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class RoadLensDatabase : RoomDatabase() {

@@ -19,7 +19,8 @@ import java.nio.FloatBuffer
 class OnnxYoloDetector(context: Context) : RoadDefectDetector {
 
     private val environment: OrtEnvironment = OrtEnvironment.getEnvironment()
-    private val session: OrtSession
+    private val session: OrtSession?
+    private var isLoaded: Boolean = false
 
     private val preprocessor = YoloPreprocessor()
     private val postprocessor = YoloPostprocessor()
@@ -29,17 +30,28 @@ class OnnxYoloDetector(context: Context) : RoadDefectDetector {
     private val inferenceLock = Any()
 
     init {
-        val modelBytes = context.assets.open("yolo11n.onnx").use { it.readBytes() }
-        val options = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(2)
+        var initializedSession: OrtSession? = null
+        try {
+            val modelBytes = context.assets.open("yolo11n.onnx").use { it.readBytes() }
+            val options = OrtSession.SessionOptions().apply {
+                setIntraOpNumThreads(2)
+            }
+            initializedSession = environment.createSession(modelBytes, options)
+            options.close()
+            isLoaded = true
+        } catch (_: Exception) {
+            initializedSession = null
+            isLoaded = false
         }
-        session = environment.createSession(modelBytes, options)
-        options.close()
+        session = initializedSession
     }
 
+    override fun isModelLoaded(): Boolean = isLoaded && session != null
+
     override fun detectOnly(bitmap: Bitmap): List<RoadDetection> = synchronized(inferenceLock) {
+        if (!isModelLoaded()) return emptyList()
         val inputData = preprocessor.preprocessZeroAlloc(bitmap)
-        val predictions = runInference(inputData)
+        val predictions = runInference(inputData) ?: return emptyList()
         return postprocessor.processPredictions(predictions, bitmap.width, bitmap.height)
     }
 
@@ -49,7 +61,8 @@ class OnnxYoloDetector(context: Context) : RoadDefectDetector {
         return DetectionResult(annotatedBitmap = annotated, detections = detections)
     }
 
-    private fun runInference(inputData: FloatArray): FloatArray {
+    private fun runInference(inputData: FloatArray): FloatArray? {
+        val currentSession = session ?: return null
         val tensor = OnnxTensor.createTensor(
             environment,
             FloatBuffer.wrap(inputData),
@@ -57,7 +70,7 @@ class OnnxYoloDetector(context: Context) : RoadDefectDetector {
         )
 
         try {
-            val results = session.run(mapOf(session.inputNames.first() to tensor))
+            val results = currentSession.run(mapOf(currentSession.inputNames.first() to tensor))
             try {
                 @Suppress("UNCHECKED_CAST")
                 val output = results[0].value as Array<Array<FloatArray>>
@@ -74,12 +87,14 @@ class OnnxYoloDetector(context: Context) : RoadDefectDetector {
             } finally {
                 results.close()
             }
+        } catch (_: Exception) {
+            return null
         } finally {
             tensor.close()
         }
     }
 
     override fun close() {
-        session.close()
+        session?.close()
     }
 }

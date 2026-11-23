@@ -20,5 +20,7 @@ data class ScanSessionEntity(
     val distanceM: Float = 0f,
     val modelVersion: String = "yolo11n-v1.0",
     val appVersion: String = "1.0",
-    val sourceMode: String = "CAMERA" // CAMERA, VIDEO, IMAGE
+    val sourceMode: String = "CAMERA", // CAMERA, VIDEO, IMAGE
+    val startLocation: String? = null,
+    val stopLocation: String? = null
 )

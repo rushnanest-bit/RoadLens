@@ -34,6 +34,14 @@ class RoadInspectionRepositoryTest {
             val idx = sessions.indexOfFirst { it.sessionId == sessionId }
             if (idx >= 0) sessions[idx] = sessions[idx].copy(status = status, endedAt = endedAt)
         }
+        override suspend fun finishSessionWithLocation(sessionId: String, status: String, endedAt: Long, stopLocation: String?) {
+            val idx = sessions.indexOfFirst { it.sessionId == sessionId }
+            if (idx >= 0) sessions[idx] = sessions[idx].copy(status = status, endedAt = endedAt, stopLocation = stopLocation)
+        }
+        override suspend fun updateSessionStatus(sessionId: String, status: String) {
+            val idx = sessions.indexOfFirst { it.sessionId == sessionId }
+            if (idx >= 0) sessions[idx] = sessions[idx].copy(status = status)
+        }
     }
 
     private class FakeDetectionEventDao : DetectionEventDao {
@@ -101,6 +109,23 @@ class RoadInspectionRepositoryTest {
         val retrieved = fakeSessionDao.getSessionById("session-2")
         assertEquals("COMPLETED", retrieved?.status)
         assertEquals(5000L, retrieved?.endedAt)
+    }
+
+    @Test
+    fun finishSession_withStopLocation_savesDestination() = runBlocking {
+        val session = ScanSessionEntity(
+            sessionId = "session-3",
+            vehicleLabel = "VAN-02",
+            routeLabel = "Depot North",
+            startedAt = 1000L,
+            startLocation = "Depot North"
+        )
+        fakeSessionDao.insertSession(session)
+        fakeSessionDao.finishSessionWithLocation("session-3", status = "COMPLETED", endedAt = 6000L, stopLocation = "Airport Hub")
+
+        val retrieved = fakeSessionDao.getSessionById("session-3")
+        assertEquals("COMPLETED", retrieved?.status)
+        assertEquals("Airport Hub", retrieved?.stopLocation)
     }
 
     @Test

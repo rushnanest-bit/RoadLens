@@ -54,6 +54,9 @@ fun CameraXLiveScannerView(
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     var lastAnalyzedTime by remember { mutableLongStateOf(0L) }
 
+    val currentIsActive by rememberUpdatedState(isScanningActive)
+    val currentOnFrameAnalyzed by rememberUpdatedState(onFrameAnalyzed)
+
     val textPaint = remember {
         Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; textSize = 26f; isFakeBoldText = true }
     }
@@ -83,7 +86,7 @@ fun CameraXLiveScannerView(
 
                         imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                             val now = System.currentTimeMillis()
-                            if (isScanningActive && (now - lastAnalyzedTime >= 1000L)) {
+                            if (currentIsActive && (now - lastAnalyzedTime >= 1000L)) {
                                 lastAnalyzedTime = now
                                 val bitmap = runCatching { imageProxy.toBitmap() }.getOrNull()
                                 if (bitmap != null) {
@@ -91,7 +94,7 @@ fun CameraXLiveScannerView(
                                     bitmap.recycle()
                                     ContextCompat.getMainExecutor(ctx).execute {
                                         currentDetections = results
-                                        onFrameAnalyzed(results, now)
+                                        currentOnFrameAnalyzed(results, now)
                                     }
                                 }
                             }

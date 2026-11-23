@@ -32,4 +32,10 @@ interface ScanSessionDao {
 
     @Query("UPDATE scan_sessions SET status = :status, endedAt = :endedAt WHERE sessionId = :sessionId")
     suspend fun finishSession(sessionId: String, status: String, endedAt: Long)
+
+    @Query("UPDATE scan_sessions SET status = :status, endedAt = :endedAt, stopLocation = :stopLocation WHERE sessionId = :sessionId")
+    suspend fun finishSessionWithLocation(sessionId: String, status: String, endedAt: Long, stopLocation: String?)
+
+    @Query("UPDATE scan_sessions SET status = :status WHERE sessionId = :sessionId")
+    suspend fun updateSessionStatus(sessionId: String, status: String)
 }

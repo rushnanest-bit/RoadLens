@@ -14,7 +14,10 @@ import com.roadlens.app.domain.model.VideoDefectRecord
  */
 data class CameraScanUiState(
     val isScanning: Boolean = false,
+    val isPaused: Boolean = false,
     val activeSessionId: String? = null,
+    val startLocation: String? = null,
+    val stopLocation: String? = null,
     val liveDetections: List<RoadDetection> = emptyList(),
     val totalDetectionsInSession: Int = 0,
     val potholesInSession: Int = 0,

@@ -5,13 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,8 +23,8 @@ import com.roadlens.app.ui.viewmodel.CameraScanUiState
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 
 /**
- * Live CameraX scan UI section with permission handling and telemetry summary.
- * Maintained well below 200 lines strictly adhering to project engineering rules.
+ * Live CameraX scan UI section with model readiness gating, route session dialogs, and pause controls.
+ * Strictly under 200 lines per project engineering rules.
  */
 @Composable
 fun CameraScanSection(
@@ -42,13 +36,39 @@ fun CameraScanSection(
     var hasCameraPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
-
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
         hasCameraPermission = perms[Manifest.permission.CAMERA] == true
     }
 
+    var showStartDialog by remember { mutableStateOf(false) }
+    var showStopDialog by remember { mutableStateOf(false) }
+
     val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    val amberPause = Color(0xFFD97706)
+    val dangerRed = Color(0xFFDC2626)
+
+    if (showStartDialog) {
+        val currentVehicle = viewModel.uiState.collectAsState().value.vehicleRegistration
+        StartScanDialog(
+            initialVehicle = currentVehicle,
+            onDismiss = { showStartDialog = false },
+            onConfirm = { vehicle, startLoc ->
+                viewModel.startCameraScan(vehicle, startLoc)
+                showStartDialog = false
+            }
+        )
+    }
+
+    if (showStopDialog) {
+        StopScanDialog(
+            totalDetections = cameraState.totalDetectionsInSession,
+            onDismiss = { showStopDialog = false },
+            onConfirm = { stopLoc ->
+                viewModel.stopCameraScan(stopLoc)
+                showStopDialog = false
+            }
+        )
+    }
 
     if (!hasCameraPermission) {
         Column(
@@ -68,22 +88,45 @@ fun CameraScanSection(
     } else {
         CameraXLiveScannerView(
             detector = detector,
-            isScanningActive = cameraState.isScanning,
+            isScanningActive = cameraState.isScanning && !cameraState.isPaused,
             onFrameAnalyzed = { dets, time -> viewModel.processCameraFrame(dets, time) }
         )
 
         Spacer(Modifier.height(12.dp))
-        StatusCard(status = cameraState.statusMessage, isLoading = cameraState.isScanning)
+        StatusCard(status = cameraState.statusMessage, isLoading = cameraState.isScanning && !cameraState.isPaused)
 
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        if (!cameraState.isScanning) {
             Button(
-                onClick = { if (cameraState.isScanning) viewModel.stopCameraScan() else viewModel.startCameraScan() },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = if (cameraState.isScanning) Color(0xFFDC2626) else brandGreen),
+                onClick = {
+                    if (viewModel.checkModelAvailability()) {
+                        showStartDialog = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(if (cameraState.isScanning) "Stop Live Scan" else "Start Live Scan (1 FPS)", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("Start Live Scan (1 FPS)", color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { if (cameraState.isPaused) viewModel.resumeCameraScan() else viewModel.pauseCameraScan() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (cameraState.isPaused) brandGreen else amberPause),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(if (cameraState.isPaused) "Resume Scan" else "Pause Scan", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+                Button(
+                    onClick = { showStopDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = dangerRed),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Stop Scan", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
 
