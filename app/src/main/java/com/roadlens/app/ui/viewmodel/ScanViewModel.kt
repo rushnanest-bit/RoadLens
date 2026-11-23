@@ -98,10 +98,10 @@ class ScanViewModel(
         }
     }
 
-    fun processCameraFrame(detections: List<RoadDetection>, timestampMs: Long) {
+    fun processCameraFrame(detections: List<RoadDetection>, timestampMs: Long, lat: Double? = null, lon: Double? = null, accuracy: Float? = null) {
         if (_uiState.value.cameraState.isPaused || !_uiState.value.cameraState.isScanning) return
         val sid = _uiState.value.cameraState.activeSessionId ?: "local"
-        viewModelScope.launch { repository?.recordDetections(sid, detections, timestampMs) }
+        viewModelScope.launch { repository?.recordDetections(sid, detections, timestampMs, lat, lon, accuracy) }
         val p = detections.count { it.classIndex == 3 }
         val status = if (detections.isEmpty()) "Live: Road surface clear." else "Live: Detected ${detections.size} defect(s)."
         _uiState.update { cur ->

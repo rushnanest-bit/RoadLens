@@ -129,4 +129,13 @@ class MapViewModelTest {
         viewModel.selectHazard(null)
         assertNull(viewModel.selectedHazard.value)
     }
+
+    @Test
+    fun updateReview_updatesStatusOfSelectedHazard() = runTest {
+        viewModel.selectHazard(sampleEvents[0])
+        viewModel.updateReview(1L, "CONFIRMED")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("CONFIRMED", viewModel.selectedHazard.value?.reviewStatus)
+    }
 }

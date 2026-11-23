@@ -59,10 +59,7 @@ fun HazardMapScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onDestroy()
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); mapView.onDestroy() }
     }
 
     LaunchedEffect(hazards, maplibreMapInstance) {
@@ -173,8 +170,26 @@ fun HazardMapScreen(
             HazardDetailCard(
                 hazard = hazard,
                 onDismiss = { viewModel.selectHazard(null) },
+                onUpdateReview = { status -> viewModel.updateReview(hazard.eventId, status) },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
+        }
+
+        // Recenter / Location FAB
+        FloatingActionButton(
+            onClick = {
+                val target = hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
+                    ?: LatLng(12.9716, 77.5946)
+                maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 14.0))
+            },
+            containerColor = brandGreen,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = if (selectedHazard != null) 250.dp else 16.dp)
+        ) {
+            Text("⌖", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

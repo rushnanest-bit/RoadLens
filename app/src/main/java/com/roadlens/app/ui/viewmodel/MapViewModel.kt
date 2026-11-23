@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel managing hazard map markers, category filtering, and pin inspections.
@@ -45,5 +46,14 @@ class MapViewModel(
 
     fun selectHazard(hazard: DetectionEventEntity?) {
         _selectedHazard.value = hazard
+    }
+
+    fun updateReview(eventId: Long, status: String) {
+        viewModelScope.launch {
+            repository.updateReview(eventId, status)
+            _selectedHazard.value = _selectedHazard.value?.let {
+                if (it.eventId == eventId) it.copy(reviewStatus = status) else it
+            }
+        }
     }
 }
