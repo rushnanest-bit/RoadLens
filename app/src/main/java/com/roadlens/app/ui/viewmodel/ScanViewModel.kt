@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +33,16 @@ class ScanViewModel(
 
     private val _uiState = MutableStateFlow(ScanScreenUiState())
     val uiState: StateFlow<ScanScreenUiState> = _uiState.asStateFlow()
+
+    init {
+        repository?.let { repo ->
+            viewModelScope.launch {
+                combine(repo.totalSessions, repo.totalHazards, repo.totalPotholes, repo.pendingReviews) { s, h, p, pr ->
+                    OverviewMetricsUiState(s, h, p, pr)
+                }.collect { m -> _uiState.update { it.copy(metricsState = m) } }
+            }
+        }
+    }
 
     fun setOperationalMode(mode: ScanOperationalMode) = _uiState.update { it.copy(operationalMode = mode) }
     fun setLabSubMode(subMode: DatasetLabSubMode) = _uiState.update { it.copy(labSubMode = subMode) }
@@ -72,21 +83,15 @@ class ScanViewModel(
         }
     }
 
-    fun pauseCameraScan() {
-        val sid = _uiState.value.cameraState.activeSessionId
-        viewModelScope.launch {
-            sid?.let { repository?.updateSessionStatus(it, "PAUSED") }
-            _uiState.update { it.copy(cameraState = it.cameraState.copy(isPaused = true, statusMessage = "Scan paused. Camera feed idle.")) }
-        }
+    fun pauseCameraScan() = viewModelScope.launch {
+        _uiState.value.cameraState.activeSessionId?.let { repository?.updateSessionStatus(it, "PAUSED") }
+        _uiState.update { it.copy(cameraState = it.cameraState.copy(isPaused = true, statusMessage = "Scan paused. Camera feed idle.")) }
     }
 
-    fun resumeCameraScan() {
-        val sid = _uiState.value.cameraState.activeSessionId
+    fun resumeCameraScan() = viewModelScope.launch {
         val veh = _uiState.value.vehicleRegistration
-        viewModelScope.launch {
-            sid?.let { repository?.updateSessionStatus(it, "ACTIVE") }
-            _uiState.update { it.copy(cameraState = it.cameraState.copy(isPaused = false, statusMessage = "Scanning as $veh (1 FPS). Monitoring road.")) }
-        }
+        _uiState.value.cameraState.activeSessionId?.let { repository?.updateSessionStatus(it, "ACTIVE") }
+        _uiState.update { it.copy(cameraState = it.cameraState.copy(isPaused = false, statusMessage = "Scanning as $veh (1 FPS). Monitoring road.")) }
     }
 
     fun stopCameraScan(stopLocation: String? = null) {
@@ -111,8 +116,7 @@ class ScanViewModel(
                     totalDetectionsInSession = cur.cameraState.totalDetectionsInSession + detections.size,
                     potholesInSession = cur.cameraState.potholesInSession + p,
                     cracksInSession = cur.cameraState.cracksInSession + (detections.size - p)
-                ),
-                metricsState = cur.metricsState.copy(roadHazards = cur.metricsState.roadHazards + detections.size, potholes = cur.metricsState.potholes + p)
+                )
             )
         }
     }
