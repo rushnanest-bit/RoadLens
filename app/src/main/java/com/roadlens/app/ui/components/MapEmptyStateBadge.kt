@@ -15,25 +15,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Compact, dark-themed badge displayed when no geo-tagged hazards exist in the view.
+ * Compact, clean badge matching app theme displayed when no geo-tagged hazards exist in the view.
  * Strictly under 200 lines per project engineering rules.
  */
 @Composable
 fun MapEmptyStateBadge(
     modifier: Modifier = Modifier
 ) {
-    val cardDark = Color(0xFF18181B)
-    val accentGreen = Color(0xFF10B981)
-    val textLight = Color(0xFFF8FAFC)
-    val textMuted = Color(0xFF94A3B8)
+    val brandGreen = Color(0xFF1E3A2F)
+    val softGreen = Color(0xFFE8F5D9)
+    val textPrimary = Color(0xFF1F2937)
+    val textSecondary = Color(0xFF6B7280)
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = cardDark.copy(alpha = 0.96f),
+        color = Color.White.copy(alpha = 0.96f),
         shadowElevation = 6.dp,
         modifier = modifier
             .padding(start = 16.dp, bottom = 20.dp, end = 84.dp)
-            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(14.dp))
+            .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(14.dp))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -41,11 +41,11 @@ fun MapEmptyStateBadge(
         ) {
             Surface(
                 shape = CircleShape,
-                color = accentGreen.copy(alpha = 0.15f),
+                color = softGreen,
                 modifier = Modifier.size(28.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("i", fontSize = 13.sp, color = accentGreen, fontWeight = FontWeight.Bold)
+                    Text("i", fontSize = 13.sp, color = brandGreen, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.width(10.dp))
@@ -54,12 +54,12 @@ fun MapEmptyStateBadge(
                     text = "No hazards detected in this area",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = textLight
+                    color = textPrimary
                 )
                 Text(
                     text = "Detected hazards with valid GPS locations will appear here.",
                     fontSize = 10.sp,
-                    color = textMuted
+                    color = textSecondary
                 )
             }
         }

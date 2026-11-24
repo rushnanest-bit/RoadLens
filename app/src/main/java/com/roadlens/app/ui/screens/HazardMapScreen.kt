@@ -3,7 +3,6 @@ package com.roadlens.app.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
@@ -168,15 +167,14 @@ fun HazardMapScreen(
                     ?: LatLng(12.9716, 77.5946)
                 maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
             },
-            containerColor = Color(0xFF18181B),
+            containerColor = Color(0xFF1E3A2F),
             contentColor = Color.White,
             shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = if (selectedHazard != null) 280.dp else 20.dp)
-                .border(1.dp, Color(0xFF10B981), CircleShape)
         ) {
-            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7F284))
         }
 
         selectedHazard?.let { hazard ->
