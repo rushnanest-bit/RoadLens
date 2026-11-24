@@ -31,6 +31,9 @@ class LocationTracker(context: Context) {
             client.lastLocation.addOnSuccessListener { loc ->
                 loc?.let { _currentLocation.value = it }
             }
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { loc ->
+                loc?.let { _currentLocation.value = it }
+            }
             val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1500L)
                 .setMinUpdateIntervalMillis(1000L)
                 .build()

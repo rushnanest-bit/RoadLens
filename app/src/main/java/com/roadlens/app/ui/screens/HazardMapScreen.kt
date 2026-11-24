@@ -34,8 +34,8 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
 /**
- * Modern dark-themed hazard map screen powered by MapLibre Native Android.
- * Features ArcGIS World Dark Gray cartography, search location geocoding, and live GPS centering.
+ * Interactive hazard map screen powered by MapLibre Native Android.
+ * Automatically focuses on user's GPS location on open and drops markers on searched places.
  * Strictly under 200 lines per project engineering rules.
  */
 @Suppress("DEPRECATION")
@@ -60,7 +60,8 @@ fun HazardMapScreen(
 
     var maplibreMapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
     val mapView = remember { MapView(context) }
-    var hasCenteredInitialLocation by remember { mutableStateOf(false) }
+    var hasCenteredUserLocation by remember { mutableStateOf(false) }
+    var searchedLocation by remember { mutableStateOf<SearchLocationResult?>(null) }
     var isSearching by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner, hasLocationPermission) {
@@ -75,40 +76,46 @@ fun HazardMapScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) mapView.onStart()
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) mapView.onResume()
         if (hasLocationPermission) locationTracker.startTracking()
-        onDispose {
-            locationTracker.stopTracking()
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onDestroy()
-        }
+        onDispose { locationTracker.stopTracking(); lifecycleOwner.lifecycle.removeObserver(observer); mapView.onDestroy() }
     }
 
-    LaunchedEffect(userLocation, hazards, maplibreMapInstance) {
+    // Automatically focus on user's location when opened
+    LaunchedEffect(userLocation, maplibreMapInstance) {
         val map = maplibreMapInstance ?: return@LaunchedEffect
-        if (!hasCenteredInitialLocation) {
-            val target = userLocation?.let { LatLng(it.latitude, it.longitude) }
-                ?: hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
-            if (target != null) {
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
-                hasCenteredInitialLocation = true
-            }
+        val loc = userLocation ?: return@LaunchedEffect
+        if (!hasCenteredUserLocation) {
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 15.0))
+            hasCenteredUserLocation = true
         }
     }
 
-    LaunchedEffect(hazards, maplibreMapInstance) {
+    // Plot hazard markers, user location dot, and searched location pin
+    LaunchedEffect(hazards, searchedLocation, userLocation, maplibreMapInstance) {
         val map = maplibreMapInstance ?: return@LaunchedEffect
         map.clear()
-        hazards.forEach { hazard ->
-            val lat = hazard.latitude ?: return@forEach
-            val lon = hazard.longitude ?: return@forEach
-            val icon = HazardMapIconHelper.getIconForClass(context, hazard.classId)
+        hazards.forEach { h ->
+            val lat = h.latitude ?: return@forEach
+            val lon = h.longitude ?: return@forEach
             map.addMarker(
-                MarkerOptions()
-                    .position(LatLng(lat, lon))
-                    .icon(icon)
-                    .title("${hazard.className} (#${hazard.eventId})")
-                    .snippet("${(hazard.confidence * 100).toInt()}% • ${hazard.reviewStatus}")
+                MarkerOptions().position(LatLng(lat, lon)).icon(HazardMapIconHelper.getIconForClass(context, h.classId))
+                    .title("${h.className} (#${h.eventId})").snippet("${(h.confidence * 100).toInt()}% • ${h.reviewStatus}")
             )
+        }
+        userLocation?.let { loc ->
+            map.addMarker(
+                MarkerOptions().position(LatLng(loc.latitude, loc.longitude)).icon(HazardMapIconHelper.getUserLocationIcon(context))
+                    .title("Your Current Location").snippet("GPS active")
+            )
+        }
+        searchedLocation?.let { s ->
+            val marker = map.addMarker(
+                MarkerOptions().position(LatLng(s.latitude, s.longitude)).icon(HazardMapIconHelper.getSearchPinIcon(context))
+                    .title(s.title).snippet("Searched Location")
+            )
+            map.selectMarker(marker)
         }
     }
 
@@ -117,17 +124,15 @@ fun HazardMapScreen(
             factory = {
                 mapView.apply {
                     onCreate(null)
+                    onStart()
+                    onResume()
                     getMapAsync { map ->
-                        maplibreMapInstance = map
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(LatLng(12.9716, 77.5946))
-                            .zoom(14.5)
-                            .build()
-                        map.setStyle(RoadMapStyle.createStyleBuilder())
+                        val initialTarget = userLocation?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(12.9716, 77.5946)
+                        map.cameraPosition = CameraPosition.Builder().target(initialTarget).zoom(15.0).build()
+                        map.setStyle(RoadMapStyle.createStyleBuilder()) { maplibreMapInstance = map }
                         map.setOnMarkerClickListener { marker ->
                             val clicked = hazards.firstOrNull { marker.title?.contains("#${it.eventId}") == true }
-                            viewModel.selectHazard(clicked)
-                            true
+                            if (clicked != null) { viewModel.selectHazard(clicked); true } else false
                         }
                     }
                 }
@@ -146,11 +151,10 @@ fun HazardMapScreen(
                     val res = LocationSearchHelper.searchLocation(context, query)
                     isSearching = false
                     if (res != null) {
+                        searchedLocation = res
                         maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(res.latitude, res.longitude), 15.0))
                         Toast.makeText(context, "Located: ${res.title}", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Location not found: $query", Toast.LENGTH_SHORT).show()
-                    }
+                    } else Toast.makeText(context, "Location not found: $query", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.align(Alignment.TopCenter)
@@ -162,10 +166,9 @@ fun HazardMapScreen(
 
         FloatingActionButton(
             onClick = {
-                val target = userLocation?.let { LatLng(it.latitude, it.longitude) }
-                    ?: hazards.firstOrNull()?.let { LatLng(it.latitude ?: 12.9716, it.longitude ?: 77.5946) }
-                    ?: LatLng(12.9716, 77.5946)
-                maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15.0))
+                userLocation?.let {
+                    maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 15.0))
+                } ?: Toast.makeText(context, "Acquiring GPS fix...", Toast.LENGTH_SHORT).show()
             },
             containerColor = Color(0xFF1E3A2F),
             contentColor = Color.White,
