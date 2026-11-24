@@ -22,7 +22,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.roadlens.app.data.location.LocationTracker
 import com.roadlens.app.ui.components.HazardDetailCard
-import com.roadlens.app.ui.components.MapEmptyStateBadge
 import com.roadlens.app.ui.components.MapTopFilterBar
 import com.roadlens.app.ui.viewmodel.MapViewModel
 import kotlinx.coroutines.launch
@@ -159,10 +158,6 @@ fun HazardMapScreen(
             },
             modifier = Modifier.align(Alignment.TopCenter)
         )
-
-        if (hazards.isEmpty()) {
-            MapEmptyStateBadge(modifier = Modifier.align(Alignment.BottomStart))
-        }
 
         FloatingActionButton(
             onClick = {
