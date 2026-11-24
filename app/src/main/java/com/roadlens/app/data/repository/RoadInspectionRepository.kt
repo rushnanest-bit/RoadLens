@@ -1,6 +1,8 @@
 package com.roadlens.app.data.repository
 
 import com.roadlens.app.data.local.RoadLensDatabase
+import com.roadlens.app.data.local.dao.DetectionEventDao
+import com.roadlens.app.data.local.dao.ScanSessionDao
 import com.roadlens.app.data.local.entity.DetectionEventEntity
 import com.roadlens.app.data.local.entity.ScanSessionEntity
 import com.roadlens.app.domain.model.RoadDetection
@@ -11,11 +13,13 @@ import java.util.UUID
  * Repository orchestrating local Room persistence for sessions, detections, and review actions.
  * Strictly under 200 lines per project engineering rules.
  */
-class RoadInspectionRepository(
-    private val database: RoadLensDatabase
+open class RoadInspectionRepository(
+    database: RoadLensDatabase? = null,
+    injectedSessionDao: ScanSessionDao? = null,
+    injectedEventDao: DetectionEventDao? = null
 ) {
-    private val sessionDao = database.scanSessionDao()
-    private val eventDao = database.detectionEventDao()
+    private val sessionDao = injectedSessionDao ?: database?.scanSessionDao() ?: error("Database or DAO required")
+    private val eventDao = injectedEventDao ?: database?.detectionEventDao() ?: error("Database or DAO required")
 
     val totalSessions: Flow<Int> = sessionDao.getTotalSessionsCount()
     val totalHazards: Flow<Int> = eventDao.getTotalHazardsCount()

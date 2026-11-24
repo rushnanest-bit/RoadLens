@@ -7,10 +7,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -19,11 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.roadlens.app.ai.RoadDefectDetector
+import com.roadlens.app.data.location.LocationTracker
 import com.roadlens.app.ui.viewmodel.CameraScanUiState
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 
 /**
- * Live CameraX scan UI section with model readiness gating, route session dialogs, and pause controls.
+ * Live CameraX scan UI section with fused GPS tracking, model readiness, and telemetry.
  * Strictly under 200 lines per project engineering rules.
  */
 @Composable
@@ -33,11 +33,23 @@ fun CameraScanSection(
     detector: RoadDefectDetector
 ) {
     val context = LocalContext.current
+    val locationTracker = remember { LocationTracker(context) }
+    val location by locationTracker.currentLocation.collectAsState()
+
     var hasCameraPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
         hasCameraPermission = perms[Manifest.permission.CAMERA] == true
+    }
+
+    DisposableEffect(cameraState.isScanning, cameraState.isPaused) {
+        if (cameraState.isScanning && !cameraState.isPaused) {
+            locationTracker.startTracking()
+        } else {
+            locationTracker.stopTracking()
+        }
+        onDispose { locationTracker.stopTracking() }
     }
 
     var showStartDialog by remember { mutableStateOf(false) }
@@ -75,24 +87,41 @@ fun CameraScanSection(
             modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp)).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Camera Permission Required", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = brandGreen)
-            Text("RoadLens requires camera access to scan road defects in real time.", fontSize = 13.sp, color = Color(0xFF4B5563))
+            Text("Camera & Location Permission Required", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = brandGreen)
+            Text("RoadLens requires camera and GPS to detect and geo-tag road defects in real time.", fontSize = 13.sp, color = Color(0xFF4B5563))
             Button(
                 onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION)) },
                 colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Grant Camera Permission", color = Color.White)
+                Text("Grant Permissions", color = Color.White)
             }
         }
     } else {
         CameraXLiveScannerView(
             detector = detector,
             isScanningActive = cameraState.isScanning && !cameraState.isPaused,
-            onFrameAnalyzed = { dets, time -> viewModel.processCameraFrame(dets, time) }
+            onFrameAnalyzed = { dets, time ->
+                val loc = locationTracker.currentLocation.value
+                viewModel.processCameraFrame(dets, time, loc?.latitude, loc?.longitude, loc?.accuracy)
+            }
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
+        val (gpsLabel, gpsColor) = when {
+            location == null -> "GPS: Acquiring satellite fix..." to Color(0xFF6B7280)
+            (location?.accuracy ?: 99f) <= 25f -> "GPS: Locked (${location?.accuracy?.toInt()}m accuracy)" to Color(0xFF16A34A)
+            else -> "GPS: Weak fix (${location?.accuracy?.toInt()}m)" to Color(0xFFD97706)
+        }
+        Surface(color = Color.White, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = gpsColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.size(8.dp)) {}
+                Spacer(Modifier.width(8.dp))
+                Text(gpsLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = gpsColor)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
         StatusCard(status = cameraState.statusMessage, isLoading = cameraState.isScanning && !cameraState.isPaused)
 
         Spacer(Modifier.height(12.dp))
