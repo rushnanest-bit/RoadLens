@@ -39,4 +39,14 @@ object PermissionHelper {
     fun hasAllScanPermissions(context: Context): Boolean {
         return hasCameraPermission(context) && hasLocationPermission(context)
     }
+
+    fun openAppSettings(context: Context) {
+        val intent = android.content.Intent(
+            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        ).apply {
+            data = android.net.Uri.fromParts("package", context.packageName, null)
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
 }
