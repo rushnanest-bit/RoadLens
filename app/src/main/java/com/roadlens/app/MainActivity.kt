@@ -32,10 +32,11 @@ import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HazardMapScreen
 import com.roadlens.app.ui.screens.HomeScreen
-import com.roadlens.app.ui.screens.PlaceholderScreen
+import com.roadlens.app.ui.screens.ReportScreen
 import com.roadlens.app.ui.screens.ScanScreen
 import com.roadlens.app.ui.theme.RoadLensTheme
 import com.roadlens.app.ui.viewmodel.MapViewModel
+import com.roadlens.app.ui.viewmodel.ReportViewModel
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 import org.maplibre.android.MapLibre
 
@@ -51,18 +52,21 @@ class MainActivity : ComponentActivity() {
     private val scanViewModel: ScanViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ScanViewModel(yoloDetector, repository) as T
-            }
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ScanViewModel(yoloDetector, repository) as T
         }
     }
 
     private val mapViewModel: MapViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return MapViewModel(repository) as T
-            }
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = MapViewModel(repository) as T
+        }
+    }
+
+    private val reportViewModel: ReportViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ReportViewModel(repository) as T
         }
     }
 
@@ -78,6 +82,7 @@ class MainActivity : ComponentActivity() {
                 RoadLensApp(
                     viewModel = scanViewModel,
                     mapViewModel = mapViewModel,
+                    reportViewModel = reportViewModel,
                     detector = yoloDetector
                 )
             }
@@ -96,6 +101,7 @@ class MainActivity : ComponentActivity() {
 fun RoadLensApp(
     viewModel: ScanViewModel,
     mapViewModel: MapViewModel,
+    reportViewModel: ReportViewModel,
     detector: RoadDefectDetector
 ) {
     val context = LocalContext.current
@@ -158,9 +164,8 @@ fun RoadLensApp(
                 viewModel = mapViewModel,
                 modifier = Modifier.padding(innerPadding)
             )
-            RoadLensTab.REPORT -> PlaceholderScreen(
-                title = "Road Reports",
-                description = "Your road inspection reports and export options will appear here.",
+            RoadLensTab.REPORT -> ReportScreen(
+                viewModel = reportViewModel,
                 modifier = Modifier.padding(innerPadding)
             )
         }
