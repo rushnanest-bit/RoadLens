@@ -1,7 +1,6 @@
 package com.roadlens.app.ui.components
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -16,9 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import com.roadlens.app.ai.RoadDefectDetector
 import com.roadlens.app.data.location.LocationTracker
+import com.roadlens.app.domain.util.PermissionHelper
 import com.roadlens.app.ui.viewmodel.CameraScanUiState
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 
@@ -36,11 +35,11 @@ fun CameraScanSection(
     val locationTracker = remember { LocationTracker(context) }
     val location by locationTracker.currentLocation.collectAsState()
 
-    var hasCameraPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    var hasPermissions by remember {
+        mutableStateOf(PermissionHelper.hasAllScanPermissions(context))
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
-        hasCameraPermission = perms[Manifest.permission.CAMERA] == true
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        hasPermissions = PermissionHelper.hasAllScanPermissions(context)
     }
 
     DisposableEffect(cameraState.isScanning, cameraState.isPaused) {
@@ -54,6 +53,15 @@ fun CameraScanSection(
 
     var showStartDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
+    if (showPermissionDialog) {
+        PermissionRequiredDialog(
+            context = context,
+            onDismiss = { showPermissionDialog = false },
+            onRequestPermissions = { permissionLauncher.launch(PermissionHelper.REQUIRED_SCAN_PERMISSIONS) }
+        )
+    }
 
     val brandGreen = Color(0xFF1E3A2F)
     val amberPause = Color(0xFFD97706)
@@ -82,7 +90,7 @@ fun CameraScanSection(
         )
     }
 
-    if (!hasCameraPermission) {
+    if (!hasPermissions) {
         Column(
             modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp)).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -90,7 +98,7 @@ fun CameraScanSection(
             Text("Camera & Location Permission Required", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = brandGreen)
             Text("RoadLens requires camera and GPS to detect and geo-tag road defects in real time.", fontSize = 13.sp, color = Color(0xFF4B5563))
             Button(
-                onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION)) },
+                onClick = { showPermissionDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
                 shape = RoundedCornerShape(10.dp)
             ) {
@@ -128,7 +136,9 @@ fun CameraScanSection(
         if (!cameraState.isScanning) {
             Button(
                 onClick = {
-                    if (viewModel.checkModelAvailability()) {
+                    if (!PermissionHelper.hasAllScanPermissions(context)) {
+                        showPermissionDialog = true
+                    } else if (viewModel.checkModelAvailability()) {
                         showStartDialog = true
                     }
                 },

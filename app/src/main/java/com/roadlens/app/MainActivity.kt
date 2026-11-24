@@ -2,6 +2,7 @@ package com.roadlens.app
 
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +28,7 @@ import com.roadlens.app.data.local.RoadLensDatabase
 import com.roadlens.app.data.repository.RoadInspectionRepository
 import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.ScanOperationalMode
+import com.roadlens.app.domain.util.PermissionHelper
 import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HazardMapScreen
@@ -99,6 +102,25 @@ fun RoadLensApp(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(RoadLensTab.HOME) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { /* permissions updated */ }
+
+    LaunchedEffect(Unit) {
+        if (!PermissionHelper.hasAllScanPermissions(context)) {
+            permissionLauncher.launch(PermissionHelper.REQUIRED_SCAN_PERMISSIONS)
+        }
+    }
+
+    if (showPermissionDialog) {
+        com.roadlens.app.ui.components.PermissionRequiredDialog(
+            context = context,
+            onDismiss = { showPermissionDialog = false },
+            onRequestPermissions = { permissionLauncher.launch(PermissionHelper.REQUIRED_SCAN_PERMISSIONS) }
+        )
+    }
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -131,7 +153,13 @@ fun RoadLensApp(
         when (selectedTab) {
             RoadLensTab.HOME -> HomeScreen(
                 metrics = uiState.metricsState,
-                onStartScan = { selectedTab = RoadLensTab.SCAN },
+                onStartScan = {
+                    if (PermissionHelper.hasAllScanPermissions(context)) {
+                        selectedTab = RoadLensTab.SCAN
+                    } else {
+                        showPermissionDialog = true
+                    }
+                },
                 modifier = Modifier.padding(innerPadding)
             )
             RoadLensTab.SCAN -> ScanScreen(
