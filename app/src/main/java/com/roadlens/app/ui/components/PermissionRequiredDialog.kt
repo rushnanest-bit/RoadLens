@@ -23,7 +23,7 @@ fun PermissionRequiredDialog(
     onRequestPermissions: () -> Unit,
     onOpenSettings: () -> Unit = {}
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -32,7 +32,7 @@ fun PermissionRequiredDialog(
                 if (isSettingsMode) "Permissions Disabled" else "Permissions Required",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = brandGreen
+                color = brandNavy
             )
         },
         text = {
@@ -53,7 +53,7 @@ fun PermissionRequiredDialog(
                     onDismiss()
                     if (isSettingsMode) onOpenSettings() else onRequestPermissions()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(

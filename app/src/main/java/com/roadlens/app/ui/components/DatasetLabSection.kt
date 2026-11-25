@@ -38,7 +38,7 @@ fun DatasetLabSection(
     onChooseImage: () -> Unit,
     onChooseVideo: () -> Unit
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
     val testAmber = Color(0xFFB45309)
     val testAmberBg = Color(0xFFFEF3C7)
 
@@ -72,7 +72,7 @@ fun DatasetLabSection(
         TabRow(
             selectedTabIndex = uiState.labSubMode.ordinal,
             containerColor = Color.White,
-            contentColor = brandGreen,
+            contentColor = brandNavy,
             modifier = Modifier.clip(RoundedCornerShape(10.dp))
         ) {
             DatasetLabSubMode.entries.forEach { subMode ->

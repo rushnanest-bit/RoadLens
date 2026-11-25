@@ -81,7 +81,7 @@ fun CameraScanSection(
         )
     }
 
-    val (brandGreen, amberPause, dangerRed) = Triple(Color(0xFF1E3A2F), Color(0xFFD97706), Color(0xFFDC2626))
+    val (brandNavy, amberPause, dangerRed) = Triple(Color(0xFF0B1F3A), Color(0xFFF59E0B), Color(0xFFDC2626))
 
     if (showStartDialog) {
         val currentVehicle = viewModel.uiState.collectAsState().value.vehicleRegistration
@@ -115,7 +115,7 @@ fun CameraScanSection(
                 .fillMaxWidth()
                 .height(280.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF132A22))
+                .background(Color(0xFF071527))
                 .clickable { isSettingsMode = false; showPermissionDialog = true },
             contentAlignment = Alignment.Center
         ) {
@@ -158,7 +158,7 @@ fun CameraScanSection(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+            colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("Start Live Scan (1 FPS)", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -168,7 +168,7 @@ fun CameraScanSection(
             Button(
                 onClick = { if (cameraState.isPaused) viewModel.resumeCameraScan() else viewModel.pauseCameraScan() },
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = if (cameraState.isPaused) brandGreen else amberPause),
+                colors = ButtonDefaults.buttonColors(containerColor = if (cameraState.isPaused) brandNavy else amberPause),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(if (cameraState.isPaused) "Resume Scan" else "Pause Scan", color = Color.White, fontWeight = FontWeight.SemiBold)

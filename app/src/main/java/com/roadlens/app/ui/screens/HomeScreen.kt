@@ -1,5 +1,6 @@
 package com.roadlens.app.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,10 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -24,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.roadlens.app.R
 import com.roadlens.app.ui.components.OverviewCard
 import com.roadlens.app.ui.viewmodel.OverviewMetricsUiState
 
@@ -40,8 +43,10 @@ fun HomeScreen(
     onStartScan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    val brandNavy = Color(0xFF0B1F3A)
+    val brandTeal = Color(0xFF0EA5A4)
+    val brandCyan = Color(0xFF2DD4BF)
+    val brandAmber = Color(0xFFF59E0B)
 
     Column(
         modifier = modifier
@@ -57,14 +62,19 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("ROADLENS", color = brandGreen, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                Text("FLEET INTELLIGENCE", color = Color(0xFF4B5563), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
-            }
-            Surface(shape = CircleShape, color = brandGreen, modifier = Modifier.size(45.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("R", color = brandLime, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Road", color = Color(0xFF0B1F3A), fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
+                    Text("Lens", color = Color(0xFF0EA5A4), fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
                 }
+                Text("DETECT · MAP · REVIEW", color = Color(0xFF64748B), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             }
+            Image(
+                painter = painterResource(id = R.drawable.ic_roadlens_emblem),
+                contentDescription = "RoadLens Emblem",
+                modifier = Modifier
+                    .size(52.dp)
+                    .offset(y = 4.dp)
+            )
         }
 
         Spacer(Modifier.height(30.dp))
@@ -81,15 +91,15 @@ fun HomeScreen(
         Spacer(Modifier.height(15.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OverviewCard("Total scans", metrics.totalScans.toString(), "◉", brandGreen, Modifier.weight(1f))
-            OverviewCard("Road hazards", metrics.roadHazards.toString(), "⌖", Color(0xFFB17A35), Modifier.weight(1f))
+            OverviewCard("Total scans", metrics.totalScans.toString(), "◉", brandNavy, Modifier.weight(1f))
+            OverviewCard("Road hazards", metrics.roadHazards.toString(), "⌖", brandAmber, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OverviewCard("Potholes", metrics.potholes.toString(), "!", Color(0xFFC46B54), Modifier.weight(1f))
-            OverviewCard("Pending review", metrics.pendingReview.toString(), "◷", Color(0xFF738A59), Modifier.weight(1f))
+            OverviewCard("Potholes", metrics.potholes.toString(), "!", Color(0xFFE11D48), Modifier.weight(1f))
+            OverviewCard("Pending review", metrics.pendingReview.toString(), "◷", brandTeal, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(25.dp))
@@ -98,7 +108,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    brush = Brush.linearGradient(listOf(brandGreen, Color(0xFF132A22))),
+                    brush = Brush.linearGradient(listOf(brandNavy, Color(0xFF071527))),
                     shape = RoundedCornerShape(25.dp)
                 )
                 .padding(22.dp)
@@ -106,11 +116,11 @@ fun HomeScreen(
             Column {
                 Text("Ready to scan\nthe roads?", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("Analyze images or run real-time hardware video detection.", color = Color(0xFFD1D5DB), fontSize = 13.sp)
+                Text("Analyze images or run real-time hardware video detection.", color = Color(0xFF94A3B8), fontSize = 13.sp)
                 Spacer(Modifier.height(18.dp))
                 Button(
                     onClick = onStartScan,
-                    colors = ButtonDefaults.buttonColors(containerColor = brandLime, contentColor = brandGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = brandCyan, contentColor = brandNavy),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Start scanning", fontWeight = FontWeight.Bold)

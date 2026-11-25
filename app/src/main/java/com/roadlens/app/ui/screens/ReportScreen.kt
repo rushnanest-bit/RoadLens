@@ -38,8 +38,7 @@ fun ReportScreen(
     val rawEvents by viewModel.rawEvents.collectAsState()
     val selectedDetail by viewModel.selectedSessionDetail.collectAsState()
 
-    val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    val brandNavy = Color(0xFF0B1F3A)
 
     selectedDetail?.let { detail ->
         SessionDetailDialog(detail = detail, onDismiss = { viewModel.selectSession(null) })
@@ -48,7 +47,7 @@ fun ReportScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF3F5EE))
+            .background(Color(0xFFF8FAFC))
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
@@ -57,7 +56,7 @@ fun ReportScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Road Reports", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = brandGreen)
+                Text("Road Reports", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = brandNavy)
                 Text("Fleet road inspection logs & summaries", fontSize = 12.sp, color = Color(0xFF6B7280))
             }
             Button(
@@ -67,28 +66,29 @@ fun ReportScreen(
                         ReportExportHelper.shareCsvReport(context, csv)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
                 shape = RoundedCornerShape(10.dp),
                 enabled = rawEvents.isNotEmpty() || rawSessions.isNotEmpty()
             ) {
-                Text("Export CSV", color = brandLime, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                Text("Export CSV", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
         Spacer(Modifier.height(14.dp))
         Surface(
             color = Color.White,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(14.dp),
+            shadowElevation = 2.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                ReportMetricItem("Total Drives", sessions.size.toString())
-                ReportMetricItem("Logged Hazards", rawEvents.size.toString())
+                ReportMetricItem("Total Drives", sessions.size.toString(), Color(0xFF0B1F3A))
+                ReportMetricItem("Logged Hazards", rawEvents.size.toString(), Color(0xFF0EA5A4))
                 val potholes = rawEvents.count { it.classId == 3 }
-                ReportMetricItem("Potholes", potholes.toString())
+                ReportMetricItem("Potholes", potholes.toString(), Color(0xFFF59E0B))
             }
         }
 
@@ -111,9 +111,9 @@ fun ReportScreen(
 }
 
 @Composable
-private fun ReportMetricItem(label: String, value: String) {
+private fun ReportMetricItem(label: String, value: String, valueColor: Color = Color(0xFF0B1F3A)) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E3A2F))
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = valueColor)
         Text(label, fontSize = 11.sp, color = Color(0xFF6B7280))
     }
 }
@@ -131,9 +131,9 @@ private fun SessionCard(item: SessionReportItem, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(item.session.vehicleLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1E3A2F))
+                Text(item.session.vehicleLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0B1F3A))
                 Surface(
-                    color = if (item.session.status == "COMPLETED") Color(0xFFDCFCE7) else Color(0xFFFEF3C7),
+                    color = if (item.session.status == "COMPLETED") Color(0xFFCCFBF1) else Color(0xFFFEF3C7),
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
@@ -141,7 +141,7 @@ private fun SessionCard(item: SessionReportItem, onClick: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (item.session.status == "COMPLETED") Color(0xFF15803D) else Color(0xFFB45309)
+                        color = if (item.session.status == "COMPLETED") Color(0xFF0F766E) else Color(0xFFB45309)
                     )
                 }
             }
@@ -150,7 +150,7 @@ private fun SessionCard(item: SessionReportItem, onClick: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(timeFormat.format(Date(item.session.startedAt)), fontSize = 11.sp, color = Color(0xFF9CA3AF))
-                Text("${item.totalHazards} defects (${item.potholes} potholes, ${item.cracks} cracks)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E3A2F))
+                Text("${item.totalHazards} defects (${item.potholes} potholes, ${item.cracks} cracks)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0B1F3A))
             }
         }
     }

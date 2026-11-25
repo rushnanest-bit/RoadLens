@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,22 +23,22 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Enterprise detail inspection dialog for a selected scanning session.
- * Maintained well below 150 lines strictly per project engineering rules.
+ * Inspection session defect drilldown dialog.
+ * Maintained strictly under 200 lines per project engineering rules.
  */
 @Composable
 fun SessionDetailDialog(
     detail: SessionDetailReport,
     onDismiss: () -> Unit
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
     val timeFormat = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text(detail.session.vehicleLabel, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = brandGreen)
+                Text(detail.session.vehicleLabel, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = brandNavy)
                 val start = detail.session.startLocation ?: "Origin"
                 val stop = detail.session.stopLocation ?: "In progress"
                 Text("$start → $stop", fontSize = 13.sp, color = Color(0xFF6B7280))
@@ -43,7 +47,7 @@ fun SessionDetailDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
                 Surface(
-                    color = Color(0xFFF3F5EE),
+                    color = Color(0xFFF1F5F9),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -53,7 +57,7 @@ fun SessionDetailDialog(
                     ) {
                         Column {
                             Text("Total Logged", fontSize = 11.sp, color = Color(0xFF6B7280))
-                            Text("${detail.events.size} hazards", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = brandGreen)
+                            Text("${detail.events.size} hazards", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = brandNavy)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Started", fontSize = 11.sp, color = Color(0xFF6B7280))
@@ -99,7 +103,7 @@ fun SessionDetailDialog(
                                     "${(ev.confidence * 100).toInt()}%",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = brandGreen
+                                    color = brandNavy
                                 )
                             }
                         }
@@ -110,7 +114,7 @@ fun SessionDetailDialog(
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text("Close", color = Color.White, fontWeight = FontWeight.SemiBold)

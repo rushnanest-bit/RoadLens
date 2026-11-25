@@ -24,7 +24,7 @@ fun StopScanDialog(
     var locationInput by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
     val dangerRed = Color(0xFFDC2626)
 
     Dialog(onDismissRequest = onDismiss) {
@@ -34,7 +34,7 @@ fun StopScanDialog(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         ) {
             Column(modifier = Modifier.padding(22.dp)) {
-                Text("Complete Scan Session", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = brandGreen)
+                Text("Complete Scan Session", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = brandNavy)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Recorded $totalDetections road defect(s) during this route. Enter the ending destination name to archive this session.",

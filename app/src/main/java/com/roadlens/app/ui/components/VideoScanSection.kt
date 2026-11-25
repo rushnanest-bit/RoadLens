@@ -35,13 +35,13 @@ fun VideoScanSection(
     detector: RoadDefectDetector,
     onChooseVideo: () -> Unit
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    val brandNavy = Color(0xFF0B1F3A)
+    val brandTeal = Color(0xFF0EA5A4)
 
     Button(
         onClick = onChooseVideo,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+        colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
         shape = RoundedCornerShape(12.dp)
     ) {
         Text("Select Road Video from Gallery", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -73,7 +73,7 @@ fun VideoScanSection(
                 onValueChange = { viewModel.seekVideo(it.toLong()) },
                 valueRange = 0f..videoState.durationMs.toFloat().coerceAtLeast(1f),
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                colors = SliderDefaults.colors(thumbColor = brandGreen, activeTrackColor = brandLime)
+                colors = SliderDefaults.colors(thumbColor = brandNavy, activeTrackColor = brandTeal)
             )
             Text(TimeFormatter.formatMmSs(videoState.durationMs), fontSize = 12.sp, color = Color(0xFF6B7280))
         }
@@ -85,7 +85,7 @@ fun VideoScanSection(
             Button(onClick = { viewModel.stepVideo(-3000L) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E7EB))) {
                 Text("-3s", color = Color(0xFF1F2937))
             }
-            Button(onClick = { viewModel.toggleVideoPlay() }, colors = ButtonDefaults.buttonColors(containerColor = brandGreen)) {
+            Button(onClick = { viewModel.toggleVideoPlay() }, colors = ButtonDefaults.buttonColors(containerColor = brandNavy)) {
                 Text(if (videoState.isPlaying) "Pause" else "Play", color = Color.White)
             }
             Button(onClick = { viewModel.stepVideo(3000L) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E7EB))) {
