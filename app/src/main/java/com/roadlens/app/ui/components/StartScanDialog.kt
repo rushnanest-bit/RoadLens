@@ -25,7 +25,7 @@ fun StartScanDialog(
     var locationInput by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -34,7 +34,7 @@ fun StartScanDialog(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         ) {
             Column(modifier = Modifier.padding(22.dp)) {
-                Text("Start Live Fleet Scan", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = brandGreen)
+                Text("Start Live Fleet Scan", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = brandNavy)
                 Spacer(Modifier.height(6.dp))
                 Text("Enter vehicle and starting location details to track this inspection session.", fontSize = 13.sp, color = Color(0xFF6B7280))
 
@@ -79,7 +79,7 @@ fun StartScanDialog(
                                 onConfirm(cleanVeh, cleanLoc)
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Start Scan", color = Color.White, fontWeight = FontWeight.Bold)

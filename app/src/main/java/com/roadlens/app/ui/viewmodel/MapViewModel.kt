@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.roadlens.app.data.local.entity.DetectionEventEntity
 import com.roadlens.app.data.repository.RoadInspectionRepository
-import com.roadlens.app.domain.model.MapFilterType
+import com.roadlens.app.domain.model.MapDefectFilter
+import com.roadlens.app.domain.model.MapStatusFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,28 +22,51 @@ class MapViewModel(
     private val repository: RoadInspectionRepository
 ) : ViewModel() {
 
-    private val _filter = MutableStateFlow(MapFilterType.ALL)
-    val filter: StateFlow<MapFilterType> = _filter.asStateFlow()
+    private val _defectFilter = MutableStateFlow(MapDefectFilter.ALL)
+    val defectFilter: StateFlow<MapDefectFilter> = _defectFilter.asStateFlow()
+    val filter: StateFlow<MapDefectFilter> = _defectFilter.asStateFlow()
+
+    private val _statusFilter = MutableStateFlow(MapStatusFilter.ALL)
+    val statusFilter: StateFlow<MapStatusFilter> = _statusFilter.asStateFlow()
 
     private val _selectedHazard = MutableStateFlow<DetectionEventEntity?>(null)
     val selectedHazard: StateFlow<DetectionEventEntity?> = _selectedHazard.asStateFlow()
 
     val hazards: StateFlow<List<DetectionEventEntity>> = combine(
         repository.getAllEvents(),
-        _filter
-    ) { allEvents, currentFilter ->
+        _defectFilter,
+        _statusFilter
+    ) { allEvents, currentDefect, currentStatus ->
         val locatedEvents = allEvents.filter { it.latitude != null && it.longitude != null }
-        when (currentFilter) {
-            MapFilterType.ALL -> locatedEvents
-            MapFilterType.POTHOLES -> locatedEvents.filter { it.classId == 3 }
-            MapFilterType.CRACKS -> locatedEvents.filter { it.classId in listOf(0, 1, 2) }
-            MapFilterType.OTHER -> locatedEvents.filter { it.classId !in listOf(0, 1, 2, 3) }
-            MapFilterType.PENDING -> locatedEvents.filter { it.reviewStatus == "PENDING" }
+        locatedEvents.filter { event ->
+            val matchesDefect = when (currentDefect) {
+                MapDefectFilter.ALL -> true
+                MapDefectFilter.POTHOLES -> event.classId == 3
+                MapDefectFilter.CRACKS_ALL -> event.classId in listOf(0, 1, 2)
+                MapDefectFilter.ALLIGATOR -> event.classId == 2
+                MapDefectFilter.LONGITUDINAL -> event.classId == 0
+                MapDefectFilter.TRANSVERSE -> event.classId == 1
+            }
+            val matchesStatus = when (currentStatus) {
+                MapStatusFilter.ALL -> true
+                MapStatusFilter.PENDING -> event.reviewStatus == "PENDING"
+                MapStatusFilter.CONFIRMED -> event.reviewStatus == "CONFIRMED"
+                MapStatusFilter.DISMISSED -> event.reviewStatus == "DISMISSED"
+            }
+            matchesDefect && matchesStatus
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun setFilter(newFilter: MapFilterType) {
-        _filter.value = newFilter
+    fun setDefectFilter(newFilter: MapDefectFilter) {
+        _defectFilter.value = newFilter
+    }
+
+    fun setFilter(newFilter: MapDefectFilter) {
+        _defectFilter.value = newFilter
+    }
+
+    fun setStatusFilter(newFilter: MapStatusFilter) {
+        _statusFilter.value = newFilter
     }
 
     fun selectHazard(hazard: DetectionEventEntity?) {

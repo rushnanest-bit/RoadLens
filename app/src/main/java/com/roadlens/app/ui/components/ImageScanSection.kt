@@ -30,12 +30,12 @@ fun ImageScanSection(
     imageState: ImageScanUiState,
     onChooseImage: () -> Unit
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
 
     Button(
         onClick = onChooseImage,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+        colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
         shape = RoundedCornerShape(12.dp)
     ) {
         Text("Select Road Image from Gallery", color = Color.White, fontWeight = FontWeight.SemiBold)

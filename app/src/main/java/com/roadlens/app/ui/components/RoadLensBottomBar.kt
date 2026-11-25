@@ -22,12 +22,12 @@ fun RoadLensBottomBar(
     onTabSelected: (RoadLensTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
-    val brandLime = Color(0xFFC7F284)
+    val brandNavy = Color(0xFF0B1F3A)
+    val brandTeal = Color(0xFF0EA5A4)
 
     NavigationBar(
         containerColor = Color.White,
-        contentColor = brandGreen,
+        contentColor = brandNavy,
         tonalElevation = 8.dp,
         modifier = modifier
     ) {
@@ -38,11 +38,11 @@ fun RoadLensBottomBar(
                 icon = { Text(tab.symbol, fontSize = 21.sp, fontWeight = FontWeight.Bold) },
                 label = { Text(tab.title, fontSize = 11.sp, fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Medium) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = brandGreen,
-                    selectedTextColor = brandGreen,
-                    indicatorColor = brandLime.copy(alpha = 0.35f),
-                    unselectedIconColor = Color(0xFF9CA3AF),
-                    unselectedTextColor = Color(0xFF9CA3AF)
+                    selectedIconColor = brandNavy,
+                    selectedTextColor = brandNavy,
+                    indicatorColor = brandTeal.copy(alpha = 0.20f),
+                    unselectedIconColor = Color(0xFF94A3B8),
+                    unselectedTextColor = Color(0xFF94A3B8)
                 )
             )
         }

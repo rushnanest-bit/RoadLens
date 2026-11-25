@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // ONNX Runtime for AI inference
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.23.2")
+    implementation(libs.onnxruntime.android)
 
     // Room SQLite Persistence
     implementation(libs.androidx.room.runtime)
@@ -76,7 +76,7 @@ dependencies {
     implementation(libs.maplibre.android)
 
     testImplementation(libs.junit)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

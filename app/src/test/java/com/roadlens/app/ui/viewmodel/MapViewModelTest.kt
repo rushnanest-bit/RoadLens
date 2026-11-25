@@ -5,7 +5,8 @@ import com.roadlens.app.data.local.dao.ScanSessionDao
 import com.roadlens.app.data.local.entity.DetectionEventEntity
 import com.roadlens.app.data.local.entity.ScanSessionEntity
 import com.roadlens.app.data.repository.RoadInspectionRepository
-import com.roadlens.app.domain.model.MapFilterType
+import com.roadlens.app.domain.model.MapDefectFilter
+import com.roadlens.app.domain.model.MapStatusFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -59,7 +60,8 @@ class MapViewModelTest {
         DetectionEventEntity(eventId = 1, sessionId = "s1", capturedAt = 1000L, classId = 3, className = "Pothole (D40)", confidence = 0.9f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9716, longitude = 77.5946, reviewStatus = "PENDING"),
         DetectionEventEntity(eventId = 2, sessionId = "s1", capturedAt = 1200L, classId = 0, className = "Longitudinal Crack (D00)", confidence = 0.8f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9720, longitude = 77.5950, reviewStatus = "CONFIRMED"),
         DetectionEventEntity(eventId = 3, sessionId = "s1", capturedAt = 1400L, classId = 3, className = "Pothole (D40)", confidence = 0.85f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = null, longitude = null, reviewStatus = "PENDING"), // unlocated
-        DetectionEventEntity(eventId = 4, sessionId = "s1", capturedAt = 1600L, classId = 9, className = "Manhole Defect", confidence = 0.75f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9730, longitude = 77.5960, reviewStatus = "PENDING")
+        DetectionEventEntity(eventId = 4, sessionId = "s1", capturedAt = 1600L, classId = 2, className = "Alligator Crack (D20)", confidence = 0.75f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9730, longitude = 77.5960, reviewStatus = "PENDING"),
+        DetectionEventEntity(eventId = 5, sessionId = "s1", capturedAt = 1800L, classId = 1, className = "Transverse Crack (D10)", confidence = 0.7f, left = 0f, top = 0f, right = 10f, bottom = 10f, latitude = 12.9740, longitude = 77.5970, reviewStatus = "DISMISSED")
     )
 
     @Before
@@ -82,53 +84,64 @@ class MapViewModelTest {
     fun hazards_filtersOutEventsWithoutCoordinates() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         val list = viewModel.hazards.value
-        // Out of 4 sample events, 1 has null coordinates, so 3 should be returned
-        assertEquals(3, list.size)
+        // Out of 5 sample events, 1 has null coordinates, so 4 should be returned
+        assertEquals(4, list.size)
         assertTrue(list.all { it.latitude != null && it.longitude != null })
     }
 
     @Test
-    fun setFilter_potholes_returnsOnlyPotholes() = runTest {
+    fun setDefectFilter_potholes_returnsOnlyPotholes() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(MapFilterType.POTHOLES)
+        viewModel.setDefectFilter(MapDefectFilter.POTHOLES)
         testDispatcher.scheduler.advanceUntilIdle()
-
         val list = viewModel.hazards.value
         assertEquals(1, list.size)
         assertEquals(3, list.first().classId)
     }
 
     @Test
-    fun setFilter_cracks_returnsOnlyCracks() = runTest {
+    fun setDefectFilter_allCracks_returnsAllThreeCrackTypes() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(MapFilterType.CRACKS)
+        viewModel.setDefectFilter(MapDefectFilter.CRACKS_ALL)
         testDispatcher.scheduler.advanceUntilIdle()
-
         val list = viewModel.hazards.value
-        assertEquals(1, list.size)
-        assertEquals(0, list.first().classId)
+        assertEquals(3, list.size)
+        assertTrue(list.all { it.classId in listOf(0, 1, 2) })
     }
 
     @Test
-    fun setFilter_other_returnsOnlyOtherHazards() = runTest {
+    fun setDefectFilter_individualCrackTypes() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(MapFilterType.OTHER)
+        viewModel.setDefectFilter(MapDefectFilter.ALLIGATOR)
         testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.hazards.value.size)
+        assertEquals(2, viewModel.hazards.value.first().classId)
 
-        val list = viewModel.hazards.value
-        assertEquals(1, list.size)
-        assertEquals(9, list.first().classId)
+        viewModel.setDefectFilter(MapDefectFilter.LONGITUDINAL)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.hazards.value.size)
+        assertEquals(0, viewModel.hazards.value.first().classId)
+
+        viewModel.setDefectFilter(MapDefectFilter.TRANSVERSE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.hazards.value.size)
+        assertEquals(1, viewModel.hazards.value.first().classId)
     }
 
     @Test
-    fun setFilter_pending_returnsOnlyPendingStatus() = runTest {
+    fun setStatusFilter_and_combinedFiltering() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(MapFilterType.PENDING)
+        viewModel.setStatusFilter(MapStatusFilter.PENDING)
         testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(2, viewModel.hazards.value.size)
 
-        val list = viewModel.hazards.value
-        assertEquals(2, list.size)
-        assertTrue(list.all { it.reviewStatus == "PENDING" })
+        // Combine: All Cracks + Confirmed
+        viewModel.setDefectFilter(MapDefectFilter.CRACKS_ALL)
+        viewModel.setStatusFilter(MapStatusFilter.CONFIRMED)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.hazards.value.size)
+        assertEquals(0, viewModel.hazards.value.first().classId)
+        assertEquals("CONFIRMED", viewModel.hazards.value.first().reviewStatus)
     }
 
     @Test

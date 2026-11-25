@@ -1,6 +1,7 @@
 package com.roadlens.app.ui.components
 
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.graphics.Paint
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -88,8 +89,17 @@ fun CameraXLiveScannerView(
                             val now = System.currentTimeMillis()
                             if (currentIsActive && (now - lastAnalyzedTime >= 1000L)) {
                                 lastAnalyzedTime = now
-                                val bitmap = runCatching { imageProxy.toBitmap() }.getOrNull()
-                                if (bitmap != null) {
+                                val rotation = imageProxy.imageInfo.rotationDegrees
+                                val rawBitmap = runCatching { imageProxy.toBitmap() }.getOrNull()
+                                if (rawBitmap != null) {
+                                    val bitmap = if (rotation != 0) {
+                                        val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+                                        val rotated = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+                                        rawBitmap.recycle()
+                                        rotated
+                                    } else {
+                                        rawBitmap
+                                    }
                                     val results = detector.detectOnly(bitmap)
                                     bitmap.recycle()
                                     ContextCompat.getMainExecutor(ctx).execute {

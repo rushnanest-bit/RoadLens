@@ -35,9 +35,10 @@ fun ScanScreen(
     detector: RoadDefectDetector,
     onChooseImage: () -> Unit,
     onChooseVideo: () -> Unit,
+    onNavigateToReport: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
+    val brandNavy = Color(0xFF0B1F3A)
 
     Column(
         modifier = modifier
@@ -49,7 +50,7 @@ fun ScanScreen(
         TabRow(
             selectedTabIndex = uiState.operationalMode.ordinal,
             containerColor = Color.White,
-            contentColor = brandGreen,
+            contentColor = brandNavy,
             modifier = Modifier.clip(RoundedCornerShape(12.dp))
         ) {
             ScanOperationalMode.entries.forEach { mode ->
@@ -67,7 +68,8 @@ fun ScanScreen(
             ScanOperationalMode.LIVE_SCAN -> CameraScanSection(
                 cameraState = uiState.cameraState,
                 viewModel = viewModel,
-                detector = detector
+                detector = detector,
+                onNavigateToReport = onNavigateToReport
             )
             ScanOperationalMode.DATASET_LAB -> DatasetLabSection(
                 uiState = uiState,

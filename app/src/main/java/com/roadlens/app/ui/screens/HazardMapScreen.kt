@@ -46,7 +46,8 @@ fun HazardMapScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
-    val filter by viewModel.filter.collectAsState()
+    val defectFilter by viewModel.defectFilter.collectAsState()
+    val statusFilter by viewModel.statusFilter.collectAsState()
     val hazards by viewModel.hazards.collectAsState()
     val selectedHazard by viewModel.selectedHazard.collectAsState()
 
@@ -141,8 +142,10 @@ fun HazardMapScreen(
 
         MapTopFilterBar(
             hazardCount = hazards.size,
-            currentFilter = filter,
-            onFilterSelected = { viewModel.setFilter(it) },
+            defectFilter = defectFilter,
+            onDefectFilterSelected = { viewModel.setDefectFilter(it) },
+            statusFilter = statusFilter,
+            onStatusFilterSelected = { viewModel.setStatusFilter(it) },
             isSearching = isSearching,
             onSearchLocation = { query ->
                 coroutineScope.launch {
@@ -165,14 +168,14 @@ fun HazardMapScreen(
                     maplibreMapInstance?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 15.0))
                 } ?: Toast.makeText(context, "Acquiring GPS fix...", Toast.LENGTH_SHORT).show()
             },
-            containerColor = Color(0xFF1E3A2F),
+            containerColor = Color(0xFF0B1F3A),
             contentColor = Color.White,
             shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = if (selectedHazard != null) 280.dp else 20.dp)
         ) {
-            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7F284))
+            Text("⌖", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
 
         selectedHazard?.let { hazard ->

@@ -39,7 +39,7 @@ fun StatusCard(
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = Color(0xFF1E3A2F)
+                    color = Color(0xFF0EA5A4)
                 )
                 Spacer(Modifier.width(12.dp))
             }

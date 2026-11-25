@@ -34,7 +34,7 @@ fun PlaceholderScreen(
     ) {
         Text(
             text = title,
-            color = Color(0xFF1E3A2F),
+            color = Color(0xFF0B1F3A),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )

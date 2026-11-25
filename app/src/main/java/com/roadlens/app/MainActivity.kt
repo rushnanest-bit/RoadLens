@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,15 +27,19 @@ import com.roadlens.app.data.local.RoadLensDatabase
 import com.roadlens.app.data.repository.RoadInspectionRepository
 import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.ScanOperationalMode
+import com.roadlens.app.domain.util.PermissionHelper
 import com.roadlens.app.ui.components.RoadLensBottomBar
 import com.roadlens.app.ui.navigation.RoadLensTab
 import com.roadlens.app.ui.screens.HazardMapScreen
 import com.roadlens.app.ui.screens.HomeScreen
-import com.roadlens.app.ui.screens.PlaceholderScreen
+import com.roadlens.app.ui.screens.ReportScreen
 import com.roadlens.app.ui.screens.ScanScreen
+import com.roadlens.app.ui.screens.SplashScreen
 import com.roadlens.app.ui.theme.RoadLensTheme
 import com.roadlens.app.ui.viewmodel.MapViewModel
+import com.roadlens.app.ui.viewmodel.ReportViewModel
 import com.roadlens.app.ui.viewmodel.ScanViewModel
+import kotlinx.coroutines.delay
 import org.maplibre.android.MapLibre
 
 /**
@@ -49,18 +54,21 @@ class MainActivity : ComponentActivity() {
     private val scanViewModel: ScanViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ScanViewModel(yoloDetector, repository) as T
-            }
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ScanViewModel(yoloDetector, repository) as T
         }
     }
 
     private val mapViewModel: MapViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return MapViewModel(repository) as T
-            }
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = MapViewModel(repository) as T
+        }
+    }
+
+    private val reportViewModel: ReportViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ReportViewModel(repository) as T
         }
     }
 
@@ -76,6 +84,7 @@ class MainActivity : ComponentActivity() {
                 RoadLensApp(
                     viewModel = scanViewModel,
                     mapViewModel = mapViewModel,
+                    reportViewModel = reportViewModel,
                     detector = yoloDetector
                 )
             }
@@ -94,11 +103,28 @@ class MainActivity : ComponentActivity() {
 fun RoadLensApp(
     viewModel: ScanViewModel,
     mapViewModel: MapViewModel,
+    reportViewModel: ReportViewModel,
     detector: RoadDefectDetector
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(RoadLensTab.HOME) }
+    var isSplashVisible by remember { mutableStateOf(true) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { /* permissions updated */ }
+
+    LaunchedEffect(Unit) {
+        delay(1800)
+        isSplashVisible = false
+    }
+
+    LaunchedEffect(isSplashVisible) {
+        if (!isSplashVisible && !PermissionHelper.hasAllScanPermissions(context)) {
+            permissionLauncher.launch(PermissionHelper.REQUIRED_SCAN_PERMISSIONS)
+        }
+    }
 
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -119,38 +145,42 @@ fun RoadLensApp(
         }
     }
 
-    Scaffold(
-        containerColor = Color(0xFFF3F5EE),
-        bottomBar = {
-            RoadLensBottomBar(
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
-            )
-        }
-    ) { innerPadding ->
-        when (selectedTab) {
-            RoadLensTab.HOME -> HomeScreen(
-                metrics = uiState.metricsState,
-                onStartScan = { selectedTab = RoadLensTab.SCAN },
-                modifier = Modifier.padding(innerPadding)
-            )
-            RoadLensTab.SCAN -> ScanScreen(
-                uiState = uiState,
-                viewModel = viewModel,
-                detector = detector,
-                onChooseImage = { imageLauncher.launch("image/*") },
-                onChooseVideo = { videoLauncher.launch("video/*") },
-                modifier = Modifier.padding(innerPadding)
-            )
-            RoadLensTab.MAP -> HazardMapScreen(
-                viewModel = mapViewModel,
-                modifier = Modifier.padding(innerPadding)
-            )
-            RoadLensTab.REPORT -> PlaceholderScreen(
-                title = "Road Reports",
-                description = "Your road inspection reports and export options will appear here.",
-                modifier = Modifier.padding(innerPadding)
-            )
+    if (isSplashVisible) {
+        SplashScreen()
+    } else {
+        Scaffold(
+            containerColor = Color(0xFFF8FAFC),
+            bottomBar = {
+                RoadLensBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
+                )
+            }
+        ) { innerPadding ->
+            when (selectedTab) {
+                RoadLensTab.HOME -> HomeScreen(
+                    metrics = uiState.metricsState,
+                    onStartScan = { selectedTab = RoadLensTab.SCAN },
+                    modifier = Modifier.padding(innerPadding)
+                )
+                RoadLensTab.SCAN -> ScanScreen(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    detector = detector,
+                    onChooseImage = { imageLauncher.launch("image/*") },
+                    onChooseVideo = { videoLauncher.launch("video/*") },
+                    onNavigateToReport = { selectedTab = RoadLensTab.REPORT },
+                    modifier = Modifier.padding(innerPadding)
+                )
+                RoadLensTab.MAP -> HazardMapScreen(
+                    viewModel = mapViewModel,
+                    modifier = Modifier.padding(innerPadding)
+                )
+                RoadLensTab.REPORT -> ReportScreen(
+                    viewModel = reportViewModel,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
         }
     }
 }

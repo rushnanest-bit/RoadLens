@@ -24,8 +24,8 @@ object HazardMapIconHelper {
     private const val COLOR_POTHOLE = 0xFFF59E0B.toInt() // Amber
     private const val COLOR_CRACK = 0xFFEF4444.toInt()   // Coral Red
     private const val COLOR_OTHER = 0xFF8B5CF6.toInt()   // Purple
-    private const val COLOR_SEARCH = 0xFF2563EB.toInt()  // Royal Blue
-    private const val COLOR_USER = 0xFF10B981.toInt()    // Emerald Green
+    private const val COLOR_SEARCH = 0xFF0B1F3A.toInt()  // Brand Navy
+    private const val COLOR_USER = 0xFF0EA5E9.toInt()    // Sky Blue GPS dot
 
     fun getIconForClass(context: Context, classId: Int): Icon {
         return when {
@@ -82,7 +82,7 @@ object HazardMapIconHelper {
 
         val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = android.graphics.Color.argb(60, 16, 185, 129)
+            color = android.graphics.Color.argb(70, 14, 165, 233)
         }
         canvas.drawCircle(size / 2f, size / 2f, 28f, haloPaint)
 

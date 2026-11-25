@@ -36,8 +36,8 @@ fun HazardDetailCard(
     onUpdateReview: (status: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val brandGreen = Color(0xFF1E3A2F)
-    val chipBackground = Color(0xFFF3F5EE)
+    val brandNavy = Color(0xFF0B1F3A)
+    val chipBackground = Color(0xFFF1F5F9)
     val textPrimary = Color(0xFF1F2937)
     val textSecondary = Color(0xFF6B7280)
 
@@ -48,7 +48,7 @@ fun HazardDetailCard(
     }
 
     val statusColor = when (hazard.reviewStatus) {
-        "CONFIRMED" -> Color(0xFF16A34A)
+        "CONFIRMED" -> Color(0xFF0D9488) // Brand Teal
         "DISMISSED" -> Color(0xFF9CA3AF)
         else -> Color(0xFFD97706)
     }
@@ -121,7 +121,7 @@ fun HazardDetailCard(
                 Surface(shape = RoundedCornerShape(8.dp), color = chipBackground, modifier = Modifier.weight(1f)) {
                     Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                         Text("Confidence", fontSize = 10.sp, color = textSecondary)
-                        Text(String.format(Locale.US, "%.1f%%", hazard.confidence * 100), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = brandGreen)
+                        Text(String.format(Locale.US, "%.1f%%", hazard.confidence * 100), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = brandNavy)
                     }
                 }
                 Surface(shape = RoundedCornerShape(8.dp), color = chipBackground, modifier = Modifier.weight(2f)) {
@@ -140,7 +140,7 @@ fun HazardDetailCard(
                     Button(
                         onClick = { onUpdateReview("CONFIRMED") },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5A4)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Confirm Defect", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -160,7 +160,7 @@ fun HazardDetailCard(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = brandGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Close Details", color = Color.White, fontWeight = FontWeight.SemiBold)
