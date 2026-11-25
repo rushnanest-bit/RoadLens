@@ -169,6 +169,7 @@ fun RoadLensApp(
                     detector = detector,
                     onChooseImage = { imageLauncher.launch("image/*") },
                     onChooseVideo = { videoLauncher.launch("video/*") },
+                    onNavigateToReport = { selectedTab = RoadLensTab.REPORT },
                     modifier = Modifier.padding(innerPadding)
                 )
                 RoadLensTab.MAP -> HazardMapScreen(

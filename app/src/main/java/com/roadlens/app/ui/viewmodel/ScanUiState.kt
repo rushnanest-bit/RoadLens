@@ -2,11 +2,26 @@ package com.roadlens.app.ui.viewmodel
 
 import android.graphics.Bitmap
 import android.net.Uri
+import com.roadlens.app.data.local.entity.ScanSessionEntity
 import com.roadlens.app.domain.model.DatasetLabSubMode
 import com.roadlens.app.domain.model.DetectionResult
 import com.roadlens.app.domain.model.RoadDetection
 import com.roadlens.app.domain.model.ScanOperationalMode
 import com.roadlens.app.domain.model.VideoDefectRecord
+
+/**
+ * Summary data for a completed live inspection session.
+ */
+data class SessionSummaryData(
+    val sessionId: String,
+    val vehicleLabel: String,
+    val startLocation: String,
+    val stopLocation: String,
+    val totalDetections: Int,
+    val potholes: Int,
+    val cracks: Int,
+    val completedAt: Long = System.currentTimeMillis()
+)
 
 /**
  * Immutable UI state for live CameraX scanning and active session telemetry.
@@ -22,7 +37,12 @@ data class CameraScanUiState(
     val totalDetectionsInSession: Int = 0,
     val potholesInSession: Int = 0,
     val cracksInSession: Int = 0,
-    val statusMessage: String = "Ready to start live road scan."
+    val statusMessage: String = "Ready to start live road scan.",
+    val recentSessions: List<ScanSessionEntity> = emptyList(),
+    val lastSessionHazards: Int = 0,
+    val lastSessionPotholes: Int = 0,
+    val lastSessionCracks: Int = 0,
+    val completedSummary: SessionSummaryData? = null
 )
 
 /**

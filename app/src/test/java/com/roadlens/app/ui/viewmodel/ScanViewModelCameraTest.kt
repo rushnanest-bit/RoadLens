@@ -131,4 +131,30 @@ class ScanViewModelCameraTest {
         // No detections accumulated because scan is paused
         assertEquals(0, viewModel.uiState.value.cameraState.totalDetectionsInSession)
     }
+
+    @Test
+    fun stopCameraScan_populatesCompletedSummary_andDismissClearsIt() = runTest {
+        viewModel.startCameraScan(vehicleLabel = "KA-01-AB-1234", startLocation = "Central Hub")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val pothole = RoadDetection(3, "Pothole (D40)", 0.9f, 0f, 0f, 10f, 10f, 640, 480)
+        val crack = RoadDetection(0, "Longitudinal Crack (D00)", 0.85f, 0f, 0f, 10f, 10f, 640, 480)
+        viewModel.processCameraFrame(listOf(pothole, crack), timestampMs = 2000L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.stopCameraScan(stopLocation = "Airport Depot")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val summary = viewModel.uiState.value.cameraState.completedSummary
+        assertNotNull(summary)
+        assertEquals("KA-01-AB-1234", summary?.vehicleLabel)
+        assertEquals("Central Hub", summary?.startLocation)
+        assertEquals("Airport Depot", summary?.stopLocation)
+        assertEquals(2, summary?.totalDetections)
+        assertEquals(1, summary?.potholes)
+        assertEquals(1, summary?.cracks)
+
+        viewModel.dismissCompletionSummary()
+        assertNull(viewModel.uiState.value.cameraState.completedSummary)
+    }
 }

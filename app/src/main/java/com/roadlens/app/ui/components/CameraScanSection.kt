@@ -2,15 +2,12 @@ package com.roadlens.app.ui.components
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,14 +23,16 @@ import com.roadlens.app.ui.viewmodel.CameraScanUiState
 import com.roadlens.app.ui.viewmodel.ScanViewModel
 
 /**
- * Live CameraX scan UI section with fused GPS tracking, model readiness, and telemetry.
+ * Live CameraX scan UI section with pre-scan readiness dashboard, active scanner view,
+ * live telemetry controls, and post-scan completion summary.
  * Strictly under 200 lines per project engineering rules.
  */
 @Composable
 fun CameraScanSection(
     cameraState: CameraScanUiState,
     viewModel: ScanViewModel,
-    detector: RoadDefectDetector
+    detector: RoadDefectDetector,
+    onNavigateToReport: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -43,34 +42,29 @@ fun CameraScanSection(
     var hasPermissions by remember { mutableStateOf(PermissionHelper.hasAllScanPermissions(context)) }
     var isSettingsMode by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showStartDialog by remember { mutableStateOf(false) }
+    var showStopDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasPermissions = PermissionHelper.hasAllScanPermissions(context)
-            }
+            if (event == Lifecycle.Event.ON_RESUME) hasPermissions = PermissionHelper.hasAllScanPermissions(context)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) {
+    DisposableEffect(hasPermissions) {
+        if (hasPermissions) locationTracker.startTracking() else locationTracker.stopTracking()
+        onDispose { locationTracker.stopTracking() }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         hasPermissions = PermissionHelper.hasAllScanPermissions(context)
         if (!hasPermissions) {
             isSettingsMode = true
             showPermissionDialog = true
         }
     }
-
-    DisposableEffect(cameraState.isScanning, cameraState.isPaused) {
-        if (cameraState.isScanning && !cameraState.isPaused) locationTracker.startTracking() else locationTracker.stopTracking()
-        onDispose { locationTracker.stopTracking() }
-    }
-
-    var showStartDialog by remember { mutableStateOf(false) }
-    var showStopDialog by remember { mutableStateOf(false) }
 
     if (showPermissionDialog) {
         PermissionRequiredDialog(
@@ -80,8 +74,6 @@ fun CameraScanSection(
             onOpenSettings = { PermissionHelper.openAppSettings(context) }
         )
     }
-
-    val (brandNavy, amberPause, dangerRed) = Triple(Color(0xFF0B1F3A), Color(0xFFF59E0B), Color(0xFFDC2626))
 
     if (showStartDialog) {
         val currentVehicle = viewModel.uiState.collectAsState().value.vehicleRegistration
@@ -100,56 +92,27 @@ fun CameraScanSection(
         )
     }
 
-    if (hasPermissions) {
-        CameraXLiveScannerView(
-            detector = detector,
-            isScanningActive = cameraState.isScanning && !cameraState.isPaused,
-            onFrameAnalyzed = { dets, time ->
-                val loc = locationTracker.currentLocation.value
-                viewModel.processCameraFrame(dets, time, loc?.latitude, loc?.longitude, loc?.accuracy)
-            }
+    cameraState.completedSummary?.let { summary ->
+        ScanCompletionDialog(
+            summary = summary,
+            onViewReport = {
+                viewModel.dismissCompletionSummary()
+                onNavigateToReport()
+            },
+            onDismiss = { viewModel.dismissCompletionSummary() }
         )
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF071527))
-                .clickable { isSettingsMode = false; showPermissionDialog = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("◉", fontSize = 28.sp, color = Color(0xFF9CA3AF))
-                Text("Camera & GPS inactive • Tap to grant access", fontSize = 12.sp, color = Color(0xFF9CA3AF))
-            }
-        }
     }
 
-    Spacer(Modifier.height(10.dp))
-    val (gpsLabel, gpsColor) = when {
-        location == null -> "GPS: Acquiring satellite fix..." to Color(0xFF6B7280)
-        (location?.accuracy ?: 99f) <= 25f -> "GPS: Locked (${location?.accuracy?.toInt()}m accuracy)" to Color(0xFF16A34A)
-        else -> "GPS: Weak fix (${location?.accuracy?.toInt()}m)" to Color(0xFFD97706)
-    }
-    Surface(color = Color.White, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = gpsColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.size(8.dp)) {}
-            Spacer(Modifier.width(8.dp))
-            Text(gpsLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = gpsColor)
-        }
-    }
+    val (brandNavy, amberPause, dangerRed) = Triple(Color(0xFF0B1F3A), Color(0xFFF59E0B), Color(0xFFDC2626))
 
-    Spacer(Modifier.height(10.dp))
-    StatusCard(status = cameraState.statusMessage, isLoading = cameraState.isScanning && !cameraState.isPaused)
-
-    Spacer(Modifier.height(12.dp))
     if (!cameraState.isScanning) {
-        Button(
-            onClick = {
+        PreScanDashboard(
+            isModelLoaded = detector.isModelLoaded(),
+            lastSession = cameraState.recentSessions.firstOrNull(),
+            lastSessionHazards = cameraState.lastSessionHazards,
+            lastSessionPotholes = cameraState.lastSessionPotholes,
+            lastSessionCracks = cameraState.lastSessionCracks,
+            onStartScan = {
                 if (!PermissionHelper.hasAllScanPermissions(context)) {
                     isSettingsMode = false
                     showPermissionDialog = true
@@ -157,13 +120,36 @@ fun CameraScanSection(
                     showStartDialog = true
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = brandNavy),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Start Live Scan (1 FPS)", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
+            onViewReport = onNavigateToReport
+        )
     } else {
+        CameraXLiveScannerView(
+            detector = detector,
+            isScanningActive = !cameraState.isPaused,
+            onFrameAnalyzed = { dets, time ->
+                val loc = locationTracker.currentLocation.value
+                viewModel.processCameraFrame(dets, time, loc?.latitude, loc?.longitude, loc?.accuracy)
+            }
+        )
+
+        Spacer(Modifier.height(10.dp))
+        val (gpsLabel, gpsColor) = when {
+            location == null -> "GPS: Acquiring satellite fix..." to Color(0xFF6B7280)
+            (location?.accuracy ?: 99f) <= 25f -> "GPS: Locked (${location?.accuracy?.toInt()}m accuracy)" to Color(0xFF16A34A)
+            else -> "GPS: Weak fix (${location?.accuracy?.toInt()}m)" to Color(0xFFD97706)
+        }
+        Surface(color = Color.White, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = gpsColor, shape = RoundedCornerShape(4.dp), modifier = Modifier.size(8.dp)) {}
+                Spacer(Modifier.width(8.dp))
+                Text(gpsLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = gpsColor)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        StatusCard(status = cameraState.statusMessage, isLoading = !cameraState.isPaused)
+
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = { if (cameraState.isPaused) viewModel.resumeCameraScan() else viewModel.pauseCameraScan() },
@@ -182,16 +168,16 @@ fun CameraScanSection(
                 Text("Stop Scan", color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         }
-    }
 
-    Spacer(Modifier.height(12.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        OverviewCard("Potholes", cameraState.potholesInSession.toString(), "!", Color(0xFFC46B54), Modifier.weight(1f))
-        OverviewCard("Cracks", cameraState.cracksInSession.toString(), "⌖", Color(0xFFB17A35), Modifier.weight(1f))
-    }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            OverviewCard("Potholes", cameraState.potholesInSession.toString(), "!", Color(0xFFC46B54), Modifier.weight(1f))
+            OverviewCard("Cracks", cameraState.cracksInSession.toString(), "⌖", Color(0xFFB17A35), Modifier.weight(1f))
+        }
 
-    if (cameraState.liveDetections.isNotEmpty()) {
-        Spacer(Modifier.height(14.dp))
-        DetectionsListSection(detections = cameraState.liveDetections)
+        if (cameraState.liveDetections.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            DetectionsListSection(detections = cameraState.liveDetections)
+        }
     }
 }
