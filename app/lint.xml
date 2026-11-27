@@ -10,4 +10,7 @@
 
     <!-- Ignore KTX method preference when standard Android API is used -->
     <issue id="UseKtx" severity="ignore" />
+
+    <!-- Standard Android practice: adaptive icons in XML with PNG fallbacks for legacy devices -->
+    <issue id="IconXmlAndPng" severity="ignore" />
 </lint>
