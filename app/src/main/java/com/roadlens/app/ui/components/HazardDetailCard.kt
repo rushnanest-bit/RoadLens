@@ -33,8 +33,8 @@ import java.util.Locale
 fun HazardDetailCard(
     hazard: DetectionEventEntity,
     onDismiss: () -> Unit,
-    onUpdateReview: (status: String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onUpdateReview: (status: String) -> Unit = {}
 ) {
     val brandNavy = Color(0xFF0B1F3A)
     val chipBackground = Color(0xFFF1F5F9)

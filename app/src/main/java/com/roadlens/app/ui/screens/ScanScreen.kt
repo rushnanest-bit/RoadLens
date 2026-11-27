@@ -35,8 +35,8 @@ fun ScanScreen(
     detector: RoadDefectDetector,
     onChooseImage: () -> Unit,
     onChooseVideo: () -> Unit,
-    onNavigateToReport: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToReport: () -> Unit = {}
 ) {
     val brandNavy = Color(0xFF0B1F3A)
 

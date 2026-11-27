@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedResources">
     <color name="brand_navy">#0B1F3A</color>
     <color name="brand_navy_dark">#071527</color>
     <color name="brand_teal">#0EA5A4</color>

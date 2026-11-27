@@ -152,7 +152,11 @@ fun LiveVideoDetectorCanvas(
                 TextureView(ctx).apply {
                     textureView = this
                     surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) { activeSurface = Surface(st) }
+                        @android.annotation.SuppressLint("Recycle")
+                        override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
+                            activeSurface?.release()
+                            activeSurface = Surface(st)
+                        }
                         override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) = Unit
                         override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
                             activeSurface?.release()

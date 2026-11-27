@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Ignore informational dependency update suggestions to preserve working library versions -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+
+    <!-- Ignore obsolete custom lint check from external legacy library JARs -->
+    <issue id="ObsoleteLintCustomCheck" severity="ignore" />
+
+    <!-- Ignore KTX method preference when standard Android API is used -->
+    <issue id="UseKtx" severity="ignore" />
+</lint>
