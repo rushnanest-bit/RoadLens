@@ -8,7 +8,7 @@ import android.content.Context
 
 class YoloModelInspector(private val context: Context) {
 
-    private val environment = OrtEnvironment.getEnvironment()
+    private val environment by lazy { OrtEnvironment.getEnvironment() }
 
     private var session: OrtSession? = null
 

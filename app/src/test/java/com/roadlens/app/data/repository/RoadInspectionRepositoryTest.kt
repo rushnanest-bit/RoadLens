@@ -6,17 +6,19 @@ import com.roadlens.app.data.local.entity.DetectionEventEntity
 import com.roadlens.app.data.local.entity.ScanSessionEntity
 import com.roadlens.app.domain.model.RoadDetection
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit tests for RoadInspectionRepository persistence and location heuristics.
+ * Unit tests for RoadInspectionRepository persistence, flows, and GPS heuristics.
  * Strictly under 200 lines per project engineering rules.
- * Covers positive, negative, and boundary-condition scenarios (KPI 4.7).
+ * Covers positive, negative, and boundary-condition scenarios.
  */
 class RoadInspectionRepositoryTest {
 
@@ -27,9 +29,10 @@ class RoadInspectionRepositoryTest {
             val idx = sessions.indexOfFirst { it.sessionId == session.sessionId }
             if (idx >= 0) sessions[idx] = session
         }
-        override fun getAllSessions(): Flow<List<ScanSessionEntity>> = flowOf(sessions)
-        override suspend fun getSessionById(sessionId: String): ScanSessionEntity? = sessions.firstOrNull { it.sessionId == sessionId }
-        override fun getTotalSessionsCount(): Flow<Int> = flowOf(sessions.size)
+        override fun getAllSessions(): Flow<List<ScanSessionEntity>> = kotlinx.coroutines.flow.flow { emit(sessions.toList()) }
+        override suspend fun getSessionById(sessionId: String): ScanSessionEntity? =
+            sessions.firstOrNull { it.sessionId == sessionId }
+        override fun getTotalSessionsCount(): Flow<Int> = kotlinx.coroutines.flow.flow { emit(sessions.size) }
         override suspend fun finishSession(sessionId: String, status: String, endedAt: Long) {
             val idx = sessions.indexOfFirst { it.sessionId == sessionId }
             if (idx >= 0) sessions[idx] = sessions[idx].copy(status = status, endedAt = endedAt)
@@ -59,11 +62,11 @@ class RoadInspectionRepositoryTest {
             if (idx >= 0) events[idx] = event
         }
         override fun getEventsForSession(sessionId: String): Flow<List<DetectionEventEntity>> =
-            flowOf(events.filter { it.sessionId == sessionId })
-        override fun getAllEvents(): Flow<List<DetectionEventEntity>> = flowOf(events)
-        override fun getTotalHazardsCount(): Flow<Int> = flowOf(events.size)
-        override fun getPotholesCount(): Flow<Int> = flowOf(events.count { it.classId == 3 })
-        override fun getPendingReviewCount(): Flow<Int> = flowOf(events.count { it.reviewStatus == "PENDING" })
+            kotlinx.coroutines.flow.flow { emit(events.filter { it.sessionId == sessionId }) }
+        override fun getAllEvents(): Flow<List<DetectionEventEntity>> = kotlinx.coroutines.flow.flow { emit(events.toList()) }
+        override fun getTotalHazardsCount(): Flow<Int> = kotlinx.coroutines.flow.flow { emit(events.size) }
+        override fun getPotholesCount(): Flow<Int> = kotlinx.coroutines.flow.flow { emit(events.count { it.classId == 3 }) }
+        override fun getPendingReviewCount(): Flow<Int> = kotlinx.coroutines.flow.flow { emit(events.count { it.reviewStatus == "PENDING" }) }
         override suspend fun updateReviewStatus(eventId: Long, status: String, reviewerClass: String?, notes: String?) {
             val idx = events.indexOfFirst { it.eventId == eventId }
             if (idx >= 0) events[idx] = events[idx].copy(reviewStatus = status, reviewerClass = reviewerClass, notes = notes)
@@ -72,122 +75,121 @@ class RoadInspectionRepositoryTest {
 
     private lateinit var fakeSessionDao: FakeScanSessionDao
     private lateinit var fakeEventDao: FakeDetectionEventDao
+    private lateinit var repository: RoadInspectionRepository
 
     @Before
     fun setUp() {
         fakeSessionDao = FakeScanSessionDao()
         fakeEventDao = FakeDetectionEventDao()
+        repository = RoadInspectionRepository(
+            injectedSessionDao = fakeSessionDao,
+            injectedEventDao = fakeEventDao
+        )
     }
 
     @Test
     fun startSession_createsActiveSessionRecord() = runBlocking {
-        val session = ScanSessionEntity(
-            sessionId = "session-1",
+        val sessionId = repository.startSession(
             vehicleLabel = "TRUCK-42",
             routeLabel = "Route-North",
-            startedAt = 1000L
+            sourceMode = "CAMERA",
+            startLocation = "Depot 1"
         )
-        fakeSessionDao.insertSession(session)
-
-        val retrieved = fakeSessionDao.getSessionById("session-1")
-        assertNotNull(retrieved)
-        assertEquals("TRUCK-42", retrieved?.vehicleLabel)
-        assertEquals("ACTIVE", retrieved?.status)
+        assertNotNull(sessionId)
+        assertEquals(1, fakeSessionDao.sessions.size)
+        val s = fakeSessionDao.sessions.first()
+        assertEquals(sessionId, s.sessionId)
+        assertEquals("TRUCK-42", s.vehicleLabel)
+        assertEquals("ACTIVE", s.status)
+        assertEquals("Depot 1", s.startLocation)
     }
 
     @Test
     fun finishSession_marksStatusCompleted() = runBlocking {
-        val session = ScanSessionEntity(
-            sessionId = "session-2",
-            vehicleLabel = "VAN-01",
-            routeLabel = "Ring Road",
-            startedAt = 1000L
-        )
-        fakeSessionDao.insertSession(session)
-        fakeSessionDao.finishSession("session-2", status = "COMPLETED", endedAt = 5000L)
+        val sessionId = repository.startSession("VAN-01", "Ring Road", "VIDEO")
+        repository.finishSession(sessionId)
 
-        val retrieved = fakeSessionDao.getSessionById("session-2")
-        assertEquals("COMPLETED", retrieved?.status)
-        assertEquals(5000L, retrieved?.endedAt)
+        val s = fakeSessionDao.sessions.first()
+        assertEquals("COMPLETED", s.status)
+        assertTrue(s.endedAt != null && s.endedAt > 0L)
     }
 
     @Test
     fun finishSession_withStopLocation_savesDestination() = runBlocking {
-        val session = ScanSessionEntity(
-            sessionId = "session-3",
-            vehicleLabel = "VAN-02",
-            routeLabel = "Depot North",
-            startedAt = 1000L,
-            startLocation = "Depot North"
-        )
-        fakeSessionDao.insertSession(session)
-        fakeSessionDao.finishSessionWithLocation("session-3", status = "COMPLETED", endedAt = 6000L, stopLocation = "Airport Hub")
+        val sessionId = repository.startSession("VAN-02", "Expressway", "CAMERA")
+        repository.finishSession(sessionId, stopLocation = "Airport Hub")
 
-        val retrieved = fakeSessionDao.getSessionById("session-3")
-        assertEquals("COMPLETED", retrieved?.status)
-        assertEquals("Airport Hub", retrieved?.stopLocation)
+        val s = fakeSessionDao.sessions.first()
+        assertEquals("COMPLETED", s.status)
+        assertEquals("Airport Hub", s.stopLocation)
+    }
+
+    @Test
+    fun updateSessionStatus_modifiesStatus() = runBlocking {
+        val sessionId = repository.startSession("VAN-03", "Downtown", "CAMERA")
+        repository.updateSessionStatus(sessionId, "PAUSED")
+
+        assertEquals("PAUSED", fakeSessionDao.sessions.first().status)
     }
 
     @Test
     fun recordDetections_withAccurateGps_tagsAsGpsSource() = runBlocking {
         val det = RoadDetection(3, "Pothole (D40)", 0.9f, 10f, 10f, 50f, 50f, 640, 480)
-        val locationSource = if (12.9716 != null && 77.5946 != null && 10.0f <= 25f) "GPS" else "UNLOCATED"
-
-        fakeEventDao.insertEvent(
-            DetectionEventEntity(
-                sessionId = "session-1",
-                capturedAt = 2000L,
-                classId = det.classIndex,
-                className = det.className,
-                confidence = det.confidence,
-                left = det.left, top = det.top, right = det.right, bottom = det.bottom,
-                latitude = 12.9716, longitude = 77.5946, gpsAccuracyM = 10.0f,
-                locationSource = locationSource
-            )
-        )
+        repository.recordDetections("sess-1", listOf(det), 1000L, 12.9716, 77.5946, 10.0f)
 
         assertEquals(1, fakeEventDao.events.size)
-        assertEquals("GPS", fakeEventDao.events.first().locationSource)
+        val e = fakeEventDao.events.first()
+        assertEquals("GPS", e.locationSource)
+        assertEquals(3, e.classId)
+        assertEquals(12.9716, e.latitude!!, 0.0001)
     }
 
     @Test
-    fun recordDetections_withPoorGpsAccuracy_tagsAsUnlocated() = runBlocking {
-        // Boundary / Quality gate: GPS accuracy > 25m threshold per FR-07
+    fun recordDetections_withPoorAccuracyOrNullCoordinates_tagsUnlocated() = runBlocking {
         val det = RoadDetection(0, "Longitudinal Crack (D00)", 0.8f, 10f, 10f, 50f, 50f, 640, 480)
-        val accuracy = 35.0f // > 25m limit
-        val locationSource = if (accuracy <= 25f) "GPS" else "UNLOCATED"
+        // Case 1: Inaccurate GPS (> 25m threshold)
+        repository.recordDetections("sess-1", listOf(det), 1000L, 12.9716, 77.5946, 35.0f)
+        assertEquals("UNLOCATED", fakeEventDao.events[0].locationSource)
 
-        fakeEventDao.insertEvent(
-            DetectionEventEntity(
-                sessionId = "session-1",
-                capturedAt = 2000L,
-                classId = det.classIndex,
-                className = det.className,
-                confidence = det.confidence,
-                left = det.left, top = det.top, right = det.right, bottom = det.bottom,
-                latitude = 12.9716, longitude = 77.5946, gpsAccuracyM = accuracy,
-                locationSource = locationSource
-            )
-        )
+        // Case 2: Null coordinates
+        repository.recordDetections("sess-1", listOf(det), 1000L, null, null, null)
+        assertEquals("UNLOCATED", fakeEventDao.events[1].locationSource)
 
-        assertEquals("UNLOCATED", fakeEventDao.events.first().locationSource)
+        // Case 3: Empty detections list does nothing
+        repository.recordDetections("sess-1", emptyList(), 1000L, 12.9716, 77.5946, 5.0f)
+        assertEquals(2, fakeEventDao.events.size)
     }
 
     @Test
-    fun updateReviewStatus_modifiesReviewFields() = runBlocking {
-        val id = fakeEventDao.insertEvent(
-            DetectionEventEntity(
-                sessionId = "session-1", capturedAt = 1000L, classId = 3,
-                className = "Pothole (D40)", confidence = 0.85f,
-                left = 0f, top = 0f, right = 10f, bottom = 10f
-            )
-        )
+    fun updateReview_modifiesReviewFields() = runBlocking {
+        val det = RoadDetection(3, "Pothole (D40)", 0.85f, 0f, 0f, 10f, 10f, 640, 480)
+        repository.recordDetections("sess-1", listOf(det), 1000L)
+        fakeEventDao.events[0] = fakeEventDao.events[0].copy(eventId = 99L)
 
-        fakeEventDao.updateReviewStatus(id, "CONFIRMED", reviewerClass = "Severe Pothole", notes = "Requires repair patch")
+        repository.updateReview(99L, "CONFIRMED", "Severe Pothole", "Patch scheduled")
+        val e = fakeEventDao.events.first()
+        assertEquals("CONFIRMED", e.reviewStatus)
+        assertEquals("Severe Pothole", e.reviewerClass)
+        assertEquals("Patch scheduled", e.notes)
+    }
 
-        val event = fakeEventDao.events.first()
-        assertEquals("CONFIRMED", event.reviewStatus)
-        assertEquals("Severe Pothole", event.reviewerClass)
-        assertEquals("Requires repair patch", event.notes)
+    @Test
+    fun flowsAndQueries_delegateCorrectlyToDaos() = runBlocking {
+        val sessionId = repository.startSession("CAR-1", "Local", "CAMERA")
+        val det = RoadDetection(3, "Pothole (D40)", 0.9f, 0f, 0f, 10f, 10f, 640, 480)
+        repository.recordDetections(sessionId, listOf(det), 1000L)
+
+        assertEquals(1, repository.getAllSessions().first().size)
+        assertEquals(1, repository.getAllEvents().first().size)
+        assertEquals(1, repository.getEventsForSession(sessionId).first().size)
+        assertEquals(1, repository.totalSessions.first())
+        assertEquals(1, repository.totalHazards.first())
+        assertEquals(1, repository.totalPotholes.first())
+        assertEquals(1, repository.pendingReviews.first())
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun constructor_withoutDatabaseOrDaos_throwsIllegalStateException() {
+        RoadInspectionRepository(null, null, null)
     }
 }

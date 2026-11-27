@@ -183,4 +183,10 @@ class ScanViewModelTest {
         assertEquals(0, state.cumulativeCracks)
         assertEquals(0, state.totalFramesScanned)
     }
+
+    @Test
+    fun dismissCompletionSummary_clearsSummary() {
+        viewModel.dismissCompletionSummary()
+        org.junit.Assert.assertNull(viewModel.uiState.value.cameraState.completedSummary)
+    }
 }
