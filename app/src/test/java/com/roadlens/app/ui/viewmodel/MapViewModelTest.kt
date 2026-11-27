@@ -156,11 +156,22 @@ class MapViewModelTest {
     }
 
     @Test
+    fun setFilter_updatesFilterState() {
+        viewModel.setFilter(MapDefectFilter.POTHOLES)
+        assertEquals(MapDefectFilter.POTHOLES, viewModel.filter.value)
+    }
+
+    @Test
     fun updateReview_updatesStatusOfSelectedHazard() = runTest {
         viewModel.selectHazard(sampleEvents[0])
         viewModel.updateReview(1L, "CONFIRMED")
         testDispatcher.scheduler.advanceUntilIdle()
 
+        assertEquals("CONFIRMED", viewModel.selectedHazard.value?.reviewStatus)
+
+        // Non-matching event ID leaves selected hazard intact
+        viewModel.updateReview(999L, "DISMISSED")
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("CONFIRMED", viewModel.selectedHazard.value?.reviewStatus)
     }
 }
